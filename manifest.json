@@ -1,8 +1,0 @@
-{
-"name":"NutriTrack",
-"short_name":"NutriTrack",
-"display":"standalone",
-"start_url":"index.html",
-"background_color":"#0f0f1e",
-"theme_color":"#8b5cf6"
-}
