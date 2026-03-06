@@ -1,4 +1,4 @@
-<style>
+
 :root{
   --bg:#07070f;--card:#0f0f1e;--card2:#141428;
   --green:#00e5a0;--purple:#8b5cf6;--orange:#f59e0b;--red:#ef4444;--blue:#38bdf8;--pink:#ec4899;
@@ -237,4 +237,3 @@ canvas{border-radius:12px}
 .nutriscore{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:4px;font-size:10px;font-weight:900;color:#fff}
 .ns-a{background:#038141}.ns-b{background:#85bb2f}.ns-c{background:#fecb02;color:#333}
 .ns-d{background:#ee8100}.ns-e{background:#e63e11}
-</style>
