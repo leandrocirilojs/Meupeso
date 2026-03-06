@@ -3,6 +3,90 @@
 // BANCO DE ALIMENTOS LOCAL
 // =====================================================================
 const FOODS=[
+
+
+{n:"Peito de frango desfiado",c:165,p:31,ch:0,g:3.6,cat:"Carnes e Aves"},
+{n:"Frango caipira cozido",c:190,p:28,ch:0,g:8,cat:"Carnes e Aves"},
+{n:"Peru assado",c:189,p:29,ch:0,g:7,cat:"Carnes e Aves"},
+{n:"Costela bovina assada",c:291,p:24,ch:0,g:21,cat:"Carnes e Aves"},
+{n:"Cupim assado",c:321,p:26,ch:0,g:24,cat:"Carnes e Aves"},
+{n:"Carne seca cozida",c:250,p:36,ch:0,g:10,cat:"Carnes e Aves"},
+{n:"Carne de cordeiro grelhada",c:294,p:25,ch:0,g:21,cat:"Carnes e Aves"},
+{n:"Salsicha cozida",c:301,p:12,ch:2,g:27,cat:"Carnes e Aves"},
+
+{n:"Truta grelhada",c:190,p:26,ch:0,g:9,cat:"Peixes e Frutos do Mar"},
+{n:"Pescada branca",c:105,p:23,ch:0,g:1,cat:"Peixes e Frutos do Mar"},
+{n:"Polvo cozido",c:164,p:30,ch:4,g:2,cat:"Peixes e Frutos do Mar"},
+{n:"Lula frita",c:175,p:15,ch:8,g:9,cat:"Peixes e Frutos do Mar"},
+{n:"Mexilhão cozido",c:172,p:24,ch:7,g:4,cat:"Peixes e Frutos do Mar"},
+
+{n:"Queijo prato",c:352,p:25,ch:2,g:27,cat:"Ovos e Laticínios"},
+{n:"Queijo minas frescal",c:264,p:17,ch:3,g:21,cat:"Ovos e Laticínios"},
+{n:"Queijo provolone",c:351,p:26,ch:2,g:27,cat:"Ovos e Laticínios"},
+{n:"Leite semidesnatado",c:46,p:3.4,ch:5,g:1.5,cat:"Ovos e Laticínios"},
+{n:"Iogurte natural",c:61,p:3.5,ch:4.7,g:3.3,cat:"Ovos e Laticínios"},
+
+{n:"Cuscuz de milho",c:112,p:2.3,ch:25,g:0.5,cat:"Cereais e Grãos"},
+{n:"Cevada cozida",c:123,p:2.3,ch:28,g:0.4,cat:"Cereais e Grãos"},
+{n:"Milho em flocos",c:357,p:8,ch:79,g:1.5,cat:"Cereais e Grãos"},
+{n:"Farinha de trigo",c:364,p:10,ch:76,g:1,cat:"Cereais e Grãos"},
+{n:"Farinha de milho",c:365,p:7,ch:79,g:3.8,cat:"Cereais e Grãos"},
+
+{n:"Ervilha cozida",c:84,p:5.4,ch:15,g:0.4,cat:"Leguminosas"},
+{n:"Feijão branco cozido",c:140,p:9,ch:25,g:0.6,cat:"Leguminosas"},
+{n:"Feijão fradinho cozido",c:116,p:8,ch:21,g:0.5,cat:"Leguminosas"},
+
+{n:"Alface",c:15,p:1.4,ch:2.9,g:0.2,cat:"Verduras e Legumes"},
+{n:"Repolho cru",c:25,p:1.3,ch:6,g:0.1,cat:"Verduras e Legumes"},
+{n:"Berinjela cozida",c:35,p:0.8,ch:9,g:0.2,cat:"Verduras e Legumes"},
+{n:"Beterraba cozida",c:44,p:1.7,ch:10,g:0.2,cat:"Verduras e Legumes"},
+{n:"Alho cru",c:149,p:6.4,ch:33,g:0.5,cat:"Verduras e Legumes"},
+{n:"Salsa fresca",c:36,p:3,ch:6,g:0.8,cat:"Verduras e Legumes"},
+
+{n:"Inhame cozido",c:97,p:2,ch:23,g:0.1,cat:"Tubérculos"},
+{n:"Cará cozido",c:118,p:1.5,ch:28,g:0.2,cat:"Tubérculos"},
+
+{n:"Uva roxa",c:69,p:0.7,ch:18,g:0.2,cat:"Frutas"},
+{n:"Pera",c:57,p:0.4,ch:15,g:0.1,cat:"Frutas"},
+{n:"Kiwi",c:61,p:1.1,ch:15,g:0.5,cat:"Frutas"},
+{n:"Abacaxi",c:50,p:0.5,ch:13,g:0.1,cat:"Frutas"},
+{n:"Coco fresco",c:354,p:3.3,ch:15,g:33,cat:"Frutas"},
+{n:"Goiaba",c:68,p:2.6,ch:14,g:1,cat:"Frutas"},
+{n:"Maracujá",c:97,p:2.2,ch:23,g:0.7,cat:"Frutas"},
+
+{n:"Pistache",c:562,p:20,ch:28,g:45,cat:"Oleaginosas e Sementes"},
+{n:"Semente de linhaça",c:534,p:18,ch:29,g:42,cat:"Oleaginosas e Sementes"},
+{n:"Semente de girassol",c:584,p:21,ch:20,g:51,cat:"Oleaginosas e Sementes"},
+
+{n:"Margarina",c:717,p:0.2,ch:0.7,g:81,cat:"Óleos e Gorduras"},
+{n:"Óleo de soja",c:884,p:0,ch:0,g:100,cat:"Óleos e Gorduras"},
+{n:"Banha de porco",c:902,p:0,ch:0,g:100,cat:"Óleos e Gorduras"},
+
+{n:"Creatina",c:0,p:0,ch:0,g:0,cat:"Suplementos"},
+{n:"BCAA",c:0,p:0,ch:0,g:0,cat:"Suplementos"},
+{n:"Hipercalórico",c:390,p:20,ch:60,g:5,cat:"Suplementos"},
+
+{n:"Hot dog",c:290,p:11,ch:24,g:17,cat:"Fast Food"},
+{n:"X-Burger",c:305,p:17,ch:30,g:14,cat:"Fast Food"},
+{n:"Pizza calabresa (fatia)",c:285,p:12,ch:34,g:12,cat:"Fast Food"},
+
+{n:"Bolo de chocolate",c:371,p:5,ch:53,g:15,cat:"Doces e Sobremesas"},
+{n:"Bolo de cenoura",c:340,p:4,ch:52,g:12,cat:"Doces e Sobremesas"},
+{n:"Brigadeiro",c:330,p:4,ch:45,g:15,cat:"Doces e Sobremesas"},
+{n:"Doce de leite",c:315,p:6,ch:55,g:8,cat:"Doces e Sobremesas"},
+
+{n:"Café preto",c:2,p:0.3,ch:0,g:0,cat:"Bebidas"},
+{n:"Café com leite",c:40,p:2,ch:4,g:1.5,cat:"Bebidas"},
+{n:"Chá verde",c:1,p:0,ch:0,g:0,cat:"Bebidas"},
+{n:"Suco de uva",c:54,p:0.3,ch:13,g:0.1,cat:"Bebidas"},
+{n:"Suco de abacaxi",c:50,p:0.4,ch:13,g:0.1,cat:"Bebidas"},
+
+{n:"Arroz carreteiro",c:180,p:8,ch:26,g:5,cat:"Pratos Prontos"},
+{n:"Macarronada com carne",c:190,p:9,ch:28,g:6,cat:"Pratos Prontos"},
+{n:"Frango com arroz",c:170,p:14,ch:18,g:5,cat:"Pratos Prontos"},
+{n:"Purê de batata",c:113,p:2,ch:17,g:4,cat:"Pratos Prontos"},
+
+  
   {n:"Frango grelhado (peito)",c:165,p:31,ch:0,g:3.6,cat:"Carnes e Aves"},
   {n:"Frango assado (coxa)",c:215,p:26,ch:0,g:12,cat:"Carnes e Aves"},
   {n:"Frango cozido (coxa s/ pele)",c:182,p:26,ch:0,g:8,cat:"Carnes e Aves"},
