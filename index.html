@@ -7,9 +7,114 @@
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800;900&display=swap" rel="stylesheet"/>
   
     <link rel="stylesheet" href="style.css">
+  <!-- =====================================================================
+     CUIDA — Meta tags PWA
+     Cole DENTRO do <head> do seu index.html, antes do </head>
+     ===================================================================== -->
+
+<!-- PWA Core -->
+<meta name="application-name" content="Cuida"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Cuida"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="theme-color" content="#07070f"/>
+
+<!-- Descrição e SEO básico -->
+<meta name="description" content="Controle alimentar e fitness completo no seu bolso"/>
+<meta name="keywords" content="nutrição, fitness, dieta, calorias, treino, saúde"/>
+<meta name="author" content="Cuida App"/>
+
+<!-- Ícones Apple (iOS) -->
+<link rel="apple-touch-icon" href="icons/icon-152.png"/>
+<link rel="apple-touch-icon" sizes="72x72"  href="icons/icon-72.png"/>
+<link rel="apple-touch-icon" sizes="96x96"  href="icons/icon-96.png"/>
+<link rel="apple-touch-icon" sizes="128x128" href="icons/icon-128.png"/>
+<link rel="apple-touch-icon" sizes="144x144" href="icons/icon-144.png"/>
+<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png"/>
+<link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png"/>
+
+<!-- Splash screen iOS (opcional — fundo escuro) -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+
+<!-- Ícone padrão / favicon -->
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-96.png"/>
+<link rel="shortcut icon" href="icons/icon-96.png"/>
+
+<!-- Manifest -->
+<link rel="manifest" href="manifest.json"/>
+
+
+
+
+  
 </head>
 <body>
 
+
+<!-- =====================================================================
+     REGISTRO DO SERVICE WORKER
+     Cole ANTES do </body> do seu index.html (ou no final do app.js)
+     ===================================================================== -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker
+        .register('/service-worker.js')
+        .then(reg => {
+          console.log('[Cuida] Service Worker registrado:', reg.scope);
+
+          // Verifica atualização disponível
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // Notifica o usuário que há uma atualização
+                if (confirm('Nova versão do Cuida disponível! Atualizar agora?')) {
+                  newWorker.postMessage({ action: 'skipWaiting' });
+                  window.location.reload();
+                }
+              }
+            });
+          });
+        })
+        .catch(err => console.warn('[Cuida] SW erro:', err));
+    });
+  }
+
+  // ── Prompt de instalação (botão "Instalar App") ──────────────────
+  let deferredPrompt;
+
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredPrompt = e;
+
+    // Mostra botão de instalação se existir no HTML
+    const installBtn = document.getElementById('installBtn');
+    if (installBtn) {
+      installBtn.style.display = 'flex';
+      installBtn.addEventListener('click', () => {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(choice => {
+          if (choice.outcome === 'accepted') {
+            console.log('[Cuida] App instalado!');
+          }
+          deferredPrompt = null;
+          installBtn.style.display = 'none';
+        });
+      });
+    }
+  });
+
+  window.addEventListener('appinstalled', () => {
+    console.log('[Cuida] PWA instalado com sucesso!');
+    deferredPrompt = null;
+  });
+</script>
+
+
+
+  
 <!-- SETUP -->
 <div class="setup-overlay" id="setupOverlay">
   <div class="setup-header">
