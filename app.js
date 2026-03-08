@@ -973,6 +973,19 @@ Formate listas com • e destaque valores importantes em **negrito**.
 Não invente informações médicas — quando necessário, recomende consultar um nutricionista.
 
 ${buildUserContext()}`;
+
+Se o usuário disser que comeu algum alimento, extraia os alimentos mencionados e gere também um JSON no final da resposta.
+
+Formato:
+
+```json
+{
+ "foods":[
+   {"name":"ovo","grams":100},
+   {"name":"banana","grams":120}
+ ]
+}
+  
 }
 
 async function sendChatMessage() {
