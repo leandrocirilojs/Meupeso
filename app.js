@@ -821,9 +821,86 @@ function showTab(t){
   if(t==='chat') initChat();
 }
 
+
+
+
+
+
+
 // =====================================================================
 // CHAT IA — GOOGLE GEMINI
 // =====================================================================
+
+//testando
+function extractFoodJSON(text){
+  const match = text.match(/```json([\s\S]*?)```/);
+  if(!match) return null;
+
+  try{
+    return JSON.parse(match[1]);
+  }catch(e){
+    return null;
+  }
+}
+
+
+
+function addFoodsFromAI(foodList){
+
+  if(!foodList || !foodList.length) return;
+
+  foodList.forEach(item=>{
+
+    const food = FOODS.find(f =>
+      f.n.toLowerCase().includes(item.name.toLowerCase())
+    );
+
+    if(!food) return;
+
+    const grams = item.grams || 100;
+    const factor = grams / 100;
+
+    logs.push({
+      id: Date.now() + Math.random(),
+      date: todayKey(),
+      time: new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+      meal: selectedMeal,
+      food: food.n,
+      grams: grams,
+      cal: Math.round(food.c * factor),
+      prot: Math.round(food.p * factor * 10) / 10,
+      carb: Math.round(food.ch * factor * 10) / 10,
+      fat: Math.round(food.g * factor * 10) / 10,
+      source: 'ai'
+    });
+
+  });
+
+  save('nt_logs', logs);
+  updateUI();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 const GEMINI_MODEL = 'gemini-2.5-flash';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
