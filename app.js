@@ -1,4 +1,3 @@
-
 // =====================================================================
 // STATE
 // =====================================================================
@@ -11,13 +10,13 @@ let exercises = [];
 let gender = 'M';
 let selectedGoal = 'emagrecer';
 let selectedMeal = 'Café da manhã';
-let selectedFood = null; // {n, c, p, ch, g, source, brand, nutriscore, img}
+let selectedFood = null;
 let currentStep = 0;
-let searchSource = 'local'; // 'local' | 'off'
+let searchSource = 'local';
 let offLang = 'br';
 let offDebounceTimer = null;
 let offSearching = false;
-const offCache = {}; // query -> results
+const offCache = {};
 
 const TOTAL_STEPS = 3;
 const MEALS = ['Café da manhã','Almoço','Lanche','Jantar','Pré-treino','Pós-treino'];
@@ -30,6 +29,33 @@ function save(k,v){ localStorage.setItem(k,JSON.stringify(v)); }
 // =====================================================================
 // OPEN FOOD FACTS INTEGRATION
 // =====================================================================
+
+// ── Proxies CORS em cascata (tenta um por um até funcionar) ──────────
+const CORS_PROXIES = [
+  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  url => `https://cors-anywhere.herokuapp.com/${url}`,
+];
+
+async function fetchWithProxy(url) {
+  // Tenta direto primeiro (funciona no Chrome)
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'CuidaApp/1.0 (github.com/leandrocirilojs)' }
+    });
+    if (res.ok) return res;
+  } catch (_) {}
+
+  // Tenta cada proxy em sequência
+  for (const makeProxy of CORS_PROXIES) {
+    try {
+      const res = await fetch(makeProxy(url));
+      if (res.ok) return res;
+    } catch (_) {}
+  }
+
+  throw new Error('Não foi possível conectar ao Open Food Facts. Verifique sua conexão.');
+}
 
 function setSource(src) {
   searchSource = src;
@@ -79,15 +105,13 @@ async function searchOFF(query) {
   document.getElementById('offSearchIcon').textContent = '⏳';
 
   try {
-    // Use the search API v2
     const country = offLang === 'br' ? 'br' : 'world';
-    const url = `https://${country}.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=20&fields=product_name,brands,nutriments,nutriscore_grade,image_small_url,quantity,categories_tags,_id`;
+    const offUrl = `https://${country}.openfoodfacts.org/cgi/search.pl`
+      + `?search_terms=${encodeURIComponent(query)}`
+      + `&search_simple=1&action=process&json=1&page_size=20`
+      + `&fields=product_name,brands,nutriments,nutriscore_grade,image_small_url,quantity,categories_tags,_id`;
 
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'NutriTrackPro/1.0 (educational project)' }
-    });
-
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const res = await fetchWithProxy(offUrl);
     const data = await res.json();
 
     const products = (data.products || []).filter(p => {
@@ -95,7 +119,6 @@ async function searchOFF(query) {
       return p.product_name && n && (n['energy-kcal_100g'] || n['energy-kcal'] || n['energy_100g']);
     });
 
-    // Normalize each product
     const normalized = products.map(p => normalizeOFFProduct(p)).filter(Boolean);
     offCache[cacheKey] = normalized;
     renderOFFResults(normalized);
@@ -113,7 +136,6 @@ async function searchOFF(query) {
 
 function normalizeOFFProduct(p) {
   const n = p.nutriments || {};
-  // Energy: try kcal per 100g first, then convert from kJ
   let kcal = n['energy-kcal_100g'] || n['energy-kcal'];
   if (!kcal && n['energy_100g']) kcal = n['energy_100g'] / 4.184;
   if (!kcal) return null;
@@ -132,7 +154,7 @@ function normalizeOFFProduct(p) {
     ch: Math.round(carb * 10) / 10,
     g: Math.round(fat * 10) / 10,
     fiber: Math.round(fiber * 10) / 10,
-    sodium: Math.round(sodium * 1000), // mg
+    sodium: Math.round(sodium * 1000),
     sugar: Math.round(sugar * 10) / 10,
     cat: 'Open Food Facts',
     source: 'off',
@@ -185,14 +207,12 @@ function renderOFFResults(products) {
   });
 
   el.innerHTML = html;
-  // Store products on window for selection
   window._offProducts = products;
 }
 
 function selectOFFFood(idx) {
   const prod = window._offProducts[idx];
   selectedFood = prod;
-  // Highlight
   document.querySelectorAll('.off-card').forEach((el, i) => el.classList.toggle('selected', i===idx));
   showPortionSection();
 }
@@ -708,7 +728,6 @@ function drawPie(){
 // =====================================================================
 function openModal(){
   document.getElementById('logModal').classList.add('open');
-  // Reset
   document.getElementById('foodSearch').value='';
   document.getElementById('searchResults').innerHTML='';
   document.getElementById('offSearch').value='';
@@ -717,7 +736,6 @@ function openModal(){
   document.getElementById('addFoodBtn').disabled=true;
   document.getElementById('catSelect').value='';
   selectedFood=null;
-  // Reset to local by default
   setSource('local');
 }
 function closeModal(){ document.getElementById('logModal').classList.remove('open'); }
@@ -738,7 +756,6 @@ function searchFood(){
   if(!results.length){el.innerHTML='<div style="color:var(--muted);font-size:13px;padding:10px">Nenhum alimento encontrado.</div>';return;}
   el.innerHTML=results.map(f=>`<div class="food-item" onclick="selectLocalFood('${f.n.replace(/'/g,"\\'")}')"><div><div class="food-name">${f.n}</div><div class="food-cat"><span class="badge-local">LOCAL</span> ${f.cat}</div></div><div><div class="food-kcal">${f.c} kcal</div><div class="food-kcal-sub">por 100g</div></div></div>`).join('');
 }
-
 function selectLocalFood(name){
   const f = FOODS.find(x=>x.n===name);
   selectedFood = {...f, source:'local'};
@@ -747,14 +764,12 @@ function selectLocalFood(name){
 }
 
 // =====================================================================
-// PORTION SECTION (shared between local & OFF)
+// PORTION SECTION
 // =====================================================================
 function showPortionSection(){
   if(!selectedFood) return;
   document.getElementById('portionSection').style.display='block';
   document.getElementById('addFoodBtn').disabled=false;
-
-  // Show selected food info
   const srcBadge = selectedFood.source==='off'
     ? `<span class="badge-off">🌍 Open Food Facts</span>`
     : `<span class="badge-local">📦 Local</span>`;
@@ -770,7 +785,6 @@ function showPortionSection(){
   document.getElementById('gramsInput').value = 100;
   updatePreview();
 }
-
 function changeGrams(d){
   const inp=document.getElementById('gramsInput');
   inp.value=Math.max(1,(+inp.value||100)+d);
@@ -788,7 +802,6 @@ function updatePreview(){
     <div class="preview-box"><div class="preview-val" style="color:var(--red)">${(selectedFood.g*f).toFixed(1)}g</div><div class="preview-lbl">gord</div></div>
     ${extras}`;
 }
-
 function addFood(){
   if(!selectedFood)return;
   const g=+document.getElementById('gramsInput').value||100;
@@ -839,4 +852,4 @@ function showTab(t){
   if(t==='agua')renderWater();
   if(t==='graficos'){drawCharts();}
   if(t==='alertas'){const goals=calcGoals(profile);const today=logs.filter(l=>l.date===todayKey());const tot=today.reduce((a,l)=>({cal:a.cal+l.cal,prot:a.prot+l.prot,carb:a.carb+l.carb,fat:a.fat+l.fat}),{cal:0,prot:0,carb:0,fat:0});renderAlerts(tot,goals);}
-}
+                                 }
