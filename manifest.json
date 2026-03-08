@@ -2,7 +2,8 @@
   "name": "Cuida — Nutrição & Fitness",
   "short_name": "Cuida",
   "description": "Controle alimentar e fitness completo no seu bolso",
-  "start_url": "/Meupeso.html",
+  "start_url": "/Meupeso/index.html",
+  "scope": "/Meupeso/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#07070f",
@@ -64,14 +65,14 @@
       "name": "Registrar Alimento",
       "short_name": "Registrar",
       "description": "Adicionar alimento rapidamente",
-      "url": "/Meupeso.html?action=add",
+      "url": "/Meupeso/index.html?action=add",
       "icons": [{ "src": "icons/icon-96.png", "sizes": "96x96" }]
     },
     {
       "name": "Registrar Água",
       "short_name": "Água",
       "description": "Adicionar consumo de água",
-      "url": "/Meupeso.html?action=water",
+      "url": "/Meupeso/index.html?action=water",
       "icons": [{ "src": "icons/icon-96.png", "sizes": "96x96" }]
     }
   ]
