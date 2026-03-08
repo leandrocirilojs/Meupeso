@@ -5,12 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Cuida</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800;900&display=swap" rel="stylesheet"/>
-  
-    <link rel="stylesheet" href="style.css">
-  <!-- =====================================================================
-     CUIDA — Meta tags PWA
-     Cole DENTRO do <head> do seu index.html, antes do </head>
-     ===================================================================== -->
+<link rel="stylesheet" href="style.css">
 
 <!-- PWA Core -->
 <meta name="application-name" content="Cuida"/>
@@ -19,43 +14,25 @@
 <meta name="apple-mobile-web-app-title" content="Cuida"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="theme-color" content="#07070f"/>
-
-<!-- Descrição e SEO básico -->
 <meta name="description" content="Controle alimentar e fitness completo no seu bolso"/>
 <meta name="keywords" content="nutrição, fitness, dieta, calorias, treino, saúde"/>
 <meta name="author" content="Cuida App"/>
 
 <!-- Ícones Apple (iOS) -->
 <link rel="apple-touch-icon" href="icons/icon-152.png"/>
-<link rel="apple-touch-icon" sizes="72x72"  href="icons/icon-72.png"/>
-<link rel="apple-touch-icon" sizes="96x96"  href="icons/icon-96.png"/>
+<link rel="apple-touch-icon" sizes="72x72"   href="icons/icon-72.png"/>
+<link rel="apple-touch-icon" sizes="96x96"   href="icons/icon-96.png"/>
 <link rel="apple-touch-icon" sizes="128x128" href="icons/icon-128.png"/>
 <link rel="apple-touch-icon" sizes="144x144" href="icons/icon-144.png"/>
 <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png"/>
 <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png"/>
-
-<!-- Splash screen iOS (opcional — fundo escuro) -->
 <meta name="apple-mobile-web-app-status-bar-style" content="black"/>
-
-<!-- Ícone padrão / favicon -->
 <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-96.png"/>
 <link rel="shortcut icon" href="icons/icon-96.png"/>
-
-<!-- Manifest -->
 <link rel="manifest" href="manifest.json"/>
-
-
-
-
-  
 </head>
 <body>
 
-
-<!-- =====================================================================
-     REGISTRO DO SERVICE WORKER
-     Cole ANTES do </body> do seu index.html (ou no final do app.js)
-     ===================================================================== -->
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -63,13 +40,10 @@
         .register('/service-worker.js')
         .then(reg => {
           console.log('[Cuida] Service Worker registrado:', reg.scope);
-
-          // Verifica atualização disponível
           reg.addEventListener('updatefound', () => {
             const newWorker = reg.installing;
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                // Notifica o usuário que há uma atualização
                 if (confirm('Nova versão do Cuida disponível! Atualizar agora?')) {
                   newWorker.postMessage({ action: 'skipWaiting' });
                   window.location.reload();
@@ -81,40 +55,29 @@
         .catch(err => console.warn('[Cuida] SW erro:', err));
     });
   }
-
-  // ── Prompt de instalação (botão "Instalar App") ──────────────────
   let deferredPrompt;
-
   window.addEventListener('beforeinstallprompt', e => {
     e.preventDefault();
     deferredPrompt = e;
-
-    // Mostra botão de instalação se existir no HTML
     const installBtn = document.getElementById('installBtn');
     if (installBtn) {
       installBtn.style.display = 'flex';
       installBtn.addEventListener('click', () => {
         deferredPrompt.prompt();
         deferredPrompt.userChoice.then(choice => {
-          if (choice.outcome === 'accepted') {
-            console.log('[Cuida] App instalado!');
-          }
+          if (choice.outcome === 'accepted') console.log('[Cuida] App instalado!');
           deferredPrompt = null;
           installBtn.style.display = 'none';
         });
       });
     }
   });
-
   window.addEventListener('appinstalled', () => {
     console.log('[Cuida] PWA instalado com sucesso!');
     deferredPrompt = null;
   });
 </script>
 
-
-
-  
 <!-- SETUP -->
 <div class="setup-overlay" id="setupOverlay">
   <div class="setup-header">
@@ -211,6 +174,7 @@
     <button class="tab-btn" onclick="showTab('graficos')"><span>📈</span>Gráficos</button>
     <button class="tab-btn" onclick="showTab('alertas')"><span>🔔</span>Alertas</button>
     <button class="tab-btn" onclick="showTab('historico')"><span>📋</span>Histórico</button>
+    <button class="tab-btn" onclick="showTab('chat')"><span>🤖</span>IA Chat</button>
   </div>
 
   <!-- TAB RESUMO -->
@@ -369,13 +333,59 @@
     <div id="historyLog"></div>
   </div>
 
+  <!-- TAB CHAT IA -->
+  <div id="tab-chat" style="display:none" class="fadein">
+    <div class="chat-container">
+      <div class="chat-header">
+        <div class="chat-header-info">
+          <div class="chat-avatar">🥗</div>
+          <div>
+            <div class="chat-name">Nutri IA</div>
+            <div class="chat-status" id="chatStatus">● Online</div>
+          </div>
+        </div>
+        <button class="chat-clear-btn" onclick="clearChat()" title="Limpar conversa">🗑</button>
+      </div>
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-welcome">
+          <div class="chat-welcome-icon">🥗</div>
+          <div class="chat-welcome-title">Olá! Sou o Nutri IA</div>
+          <div class="chat-welcome-sub">Seu assistente nutricional inteligente. Posso analisar sua dieta, sugerir refeições e responder dúvidas sobre nutrição!</div>
+          <div class="chat-suggestions">
+            <button class="suggestion-btn" onclick="sendSuggestion(this)">📊 Como está minha dieta hoje?</button>
+            <button class="suggestion-btn" onclick="sendSuggestion(this)">🍽️ Sugestão de refeição para bater minha meta</button>
+            <button class="suggestion-btn" onclick="sendSuggestion(this)">💪 Quanto de proteína devo consumir?</button>
+            <button class="suggestion-btn" onclick="sendSuggestion(this)">🥦 Alimentos ricos em proteína e baixo em calorias</button>
+          </div>
+        </div>
+      </div>
+      <div class="chat-input-wrap">
+        <div class="chat-input-row">
+          <textarea
+            id="chatInput"
+            class="chat-input"
+            placeholder="Pergunte sobre nutrição, dieta, alimentos..."
+            rows="1"
+            onkeydown="handleChatKey(event)"
+            oninput="autoResizeTextarea(this)"
+          ></textarea>
+          <button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()">
+            <span id="chatSendIcon">➤</span>
+          </button>
+        </div>
+        <div class="chat-input-hint">Powered by Google Gemini · Seus dados são usados para personalizar respostas</div>
+      </div>
+    </div>
+  </div>
+
   <button class="fab" onclick="openModal()" id="fabBtn">+</button>
+
   <nav class="nav">
     <button class="nav-btn active" onclick="showTab('resumo')"><span>📊</span>Início</button>
     <button class="nav-btn" onclick="showTab('refeicoes')"><span>🍽️</span>Comida</button>
     <button class="nav-btn" onclick="showTab('treino')"><span>🏋️</span>Treino</button>
     <button class="nav-btn" onclick="showTab('peso')"><span>⚖️</span>Peso</button>
-    <button class="nav-btn" onclick="showTab('graficos')"><span>📈</span>Gráficos</button>
+    <button class="nav-btn" onclick="showTab('chat')"><span>🤖</span>IA</button>
   </nav>
 </div>
 
@@ -436,4 +446,4 @@
 <script src="foods.js"></script>
 <script src="app.js"></script>
 </body>
-          </html>
+</html>
