@@ -6,13 +6,13 @@ const CACHE_NAME = 'cuida-v1';
 
 // Arquivos essenciais para funcionar offline
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/app.js',
-  '/manifest.json',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
+  '/Meupeso/',
+  '/Meupeso/index.html',
+  '/Meupeso/style.css',
+  '/Meupeso/app.js',
+  '/Meupeso/manifest.json',
+  '/Meupeso/icons/icon-192.png',
+  '/Meupeso/icons/icon-512.png',
   'https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800;900&display=swap'
 ];
 
@@ -100,7 +100,7 @@ self.addEventListener('fetch', event => {
         .catch(() => {
           // Fallback offline para navegação
           if (event.request.destination === 'document') {
-            return caches.match('/index.html');
+            return caches.match('/Meupeso/index.html');
           }
         });
     })
