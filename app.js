@@ -1025,7 +1025,25 @@ async function sendChatMessage() {
     localStorage.setItem('nt_chat', JSON.stringify(chatHistory.slice(-20)));
 
     removeTyping();
+
+
+    
+    //troquei 
+    //appendMessage('ai', reply);
+    //por
     appendMessage('ai', reply);
+
+const foodData = extractFoodJSON(reply);
+
+if(foodData && foodData.foods){
+  addFoodsFromAI(foodData.foods);
+}
+
+
+
+
+
+    
 
   } catch (err) {
     removeTyping();
