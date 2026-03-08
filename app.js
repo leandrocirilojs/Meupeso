@@ -824,7 +824,7 @@ function showTab(t){
 // =====================================================================
 // CHAT IA — GOOGLE GEMINI
 // =====================================================================
-const GEMINI_MODEL = '"gemini-2.5-flash';
+const GEMINI_MODEL = 'gemini-2.5-flash';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 let chatHistory = JSON.parse(localStorage.getItem('nt_chat') || '[]');
