@@ -29,8 +29,6 @@ function save(k,v){ localStorage.setItem(k,JSON.stringify(v)); }
 // =====================================================================
 // OPEN FOOD FACTS INTEGRATION
 // =====================================================================
-
-// ── Proxies CORS em cascata (tenta um por um até funcionar) ──────────
 const CORS_PROXIES = [
   url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
   url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
@@ -38,22 +36,16 @@ const CORS_PROXIES = [
 ];
 
 async function fetchWithProxy(url) {
-  // Tenta direto primeiro (funciona no Chrome)
   try {
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'CuidaApp/1.0 (github.com/leandrocirilojs)' }
-    });
+    const res = await fetch(url, { headers: { 'User-Agent': 'CuidaApp/1.0 (github.com/leandrocirilojs)' } });
     if (res.ok) return res;
   } catch (_) {}
-
-  // Tenta cada proxy em sequência
   for (const makeProxy of CORS_PROXIES) {
     try {
       const res = await fetch(makeProxy(url));
       if (res.ok) return res;
     } catch (_) {}
   }
-
   throw new Error('Não foi possível conectar ao Open Food Facts. Verifique sua conexão.');
 }
 
@@ -84,41 +76,29 @@ function setOFFLang(lang) {
 function debounceOFF() {
   clearTimeout(offDebounceTimer);
   const q = document.getElementById('offSearch').value.trim();
-  if (q.length < 2) {
-    document.getElementById('offResults').innerHTML = '';
-    return;
-  }
+  if (q.length < 2) { document.getElementById('offResults').innerHTML = ''; return; }
   document.getElementById('offSearchIcon').textContent = '⏳';
   offDebounceTimer = setTimeout(() => searchOFF(q), 600);
 }
 
 async function searchOFF(query) {
   const cacheKey = `${offLang}::${query.toLowerCase()}`;
-  if (offCache[cacheKey]) {
-    renderOFFResults(offCache[cacheKey]);
-    return;
-  }
-
+  if (offCache[cacheKey]) { renderOFFResults(offCache[cacheKey]); return; }
   offSearching = true;
-  document.getElementById('offResults').innerHTML = `
-    <div class="off-loader"><div class="spinner"></div>Buscando no Open Food Facts...</div>`;
+  document.getElementById('offResults').innerHTML = `<div class="off-loader"><div class="spinner"></div>Buscando no Open Food Facts...</div>`;
   document.getElementById('offSearchIcon').textContent = '⏳';
-
   try {
     const country = offLang === 'br' ? 'br' : 'world';
     const offUrl = `https://${country}.openfoodfacts.org/cgi/search.pl`
       + `?search_terms=${encodeURIComponent(query)}`
       + `&search_simple=1&action=process&json=1&page_size=20`
       + `&fields=product_name,brands,nutriments,nutriscore_grade,image_small_url,quantity,categories_tags,_id`;
-
     const res = await fetchWithProxy(offUrl);
     const data = await res.json();
-
     const products = (data.products || []).filter(p => {
       const n = p.nutriments;
       return p.product_name && n && (n['energy-kcal_100g'] || n['energy-kcal'] || n['energy_100g']);
     });
-
     const normalized = products.map(p => normalizeOFFProduct(p)).filter(Boolean);
     offCache[cacheKey] = normalized;
     renderOFFResults(normalized);
@@ -139,14 +119,12 @@ function normalizeOFFProduct(p) {
   let kcal = n['energy-kcal_100g'] || n['energy-kcal'];
   if (!kcal && n['energy_100g']) kcal = n['energy_100g'] / 4.184;
   if (!kcal) return null;
-
   const prot = n['proteins_100g'] || n['proteins'] || 0;
   const carb = n['carbohydrates_100g'] || n['carbohydrates'] || 0;
   const fat  = n['fat_100g'] || n['fat'] || 0;
   const fiber = n['fiber_100g'] || n['fiber'] || 0;
   const sodium = n['sodium_100g'] || n['sodium'] || 0;
   const sugar = n['sugars_100g'] || n['sugars'] || 0;
-
   return {
     n: p.product_name.trim(),
     c: Math.round(kcal),
@@ -172,22 +150,13 @@ function renderOFFResults(products) {
     el.innerHTML = `<div class="empty" style="padding:28px 0"><div class="eicon">🔍</div><p>Nenhum produto encontrado.<br><span style="font-size:12px">Tente outras palavras ou busca global.</span></p></div>`;
     return;
   }
-
   const nsColors = {a:'#038141',b:'#85bb2f',c:'#fecb02',d:'#ee8100',e:'#e63e11'};
-
-  let html = `<div class="search-status">
-    <span class="search-status-txt">Resultados do Open Food Facts</span>
-    <span class="search-status-count">${products.length} produtos</span>
-  </div>`;
-
+  let html = `<div class="search-status"><span class="search-status-txt">Resultados do Open Food Facts</span><span class="search-status-count">${products.length} produtos</span></div>`;
   products.forEach((prod, i) => {
     const ns = prod.nutriscore ? prod.nutriscore.toLowerCase() : '';
     const nsColor = nsColors[ns] || 'var(--muted)';
-    const imgHtml = prod.img
-      ? `<img class="off-img" src="${prod.img}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
-      : '';
+    const imgHtml = prod.img ? `<img class="off-img" src="${prod.img}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : '';
     const placeholderHtml = `<div class="off-img-placeholder" style="${prod.img ? 'display:none' : ''}">🥘</div>`;
-
     html += `<div class="off-card" onclick="selectOFFFood(${i})" id="offcard_${i}">
       <div class="off-card-inner">
         ${imgHtml}${placeholderHtml}
@@ -205,7 +174,6 @@ function renderOFFResults(products) {
       </div>
     </div>`;
   });
-
   el.innerHTML = html;
   window._offProducts = products;
 }
@@ -390,9 +358,7 @@ function renderMealLog(today){
     const total=items.reduce((a,l)=>({cal:a.cal+l.cal}),{cal:0});
     html+=`<div class="meal-section"><div class="meal-header">🍽️ ${m} <span class="tag">${Math.round(total.cal)} kcal</span></div><div class="card" style="margin-top:0;padding:0;overflow:hidden">`;
     items.forEach(item=>{
-      const srcBadge = item.source==='off'
-        ? `<span class="badge-off">OFF</span>`
-        : `<span class="badge-local">LOCAL</span>`;
+      const srcBadge = item.source==='off' ? `<span class="badge-off">OFF</span>` : `<span class="badge-local">LOCAL</span>`;
       html+=`<div class="log-item"><div><div class="log-food">${item.food} ${srcBadge}</div><div class="log-detail">${item.grams}g · ${item.time}${item.brand?' · '+item.brand:''}</div></div>
       <div style="display:flex;align-items:center;gap:4px"><div style="text-align:right"><div class="log-kcal">${item.cal} kcal</div><div class="log-macros">P:${item.prot}g C:${item.carb}g G:${item.fat}g</div></div>
       <button class="delete-btn" onclick="deleteLog(${item.id})">🗑</button></div></div>`;
@@ -611,8 +577,7 @@ function renderWeekSummary(){
 let charts={};
 function drawCharts(){
   const goals=calcGoals(profile);
-  const days7=[];
-  const labels=[];
+  const days7=[],labels=[];
   for(let i=6;i>=0;i--){
     const d=new Date();d.setDate(d.getDate()-i);
     days7.push(d.toLocaleDateString('pt-BR'));
@@ -636,8 +601,7 @@ function drawBar(id,labels,data,label,goalVal,color,fill){
   const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
   ctx.clearRect(0,0,W,H);
   const max=Math.max(...data,goalVal,1)*1.1;
-  const barW=cW/data.length*0.55;
-  const gap=cW/data.length;
+  const barW=cW/data.length*0.55,gap=cW/data.length;
   ctx.strokeStyle='rgba(255,255,255,.05)';ctx.lineWidth=1;
   [0,.25,.5,.75,1].forEach(f=>{
     const y=pad.t+cH*(1-f);
@@ -652,10 +616,7 @@ function drawBar(id,labels,data,label,goalVal,color,fill){
   ctx.fillStyle='rgba(255,255,255,.4)';ctx.font='9px Sora';ctx.textAlign='left';
   ctx.fillText('Meta',pad.l+2,goalY-3);
   data.forEach((v,i)=>{
-    const x=pad.l+i*gap+(gap-barW)/2;
-    const h=(v/max)*cH;
-    const y=pad.t+cH-h;
-    const over=v>goalVal;
+    const x=pad.l+i*gap+(gap-barW)/2,h=(v/max)*cH,y=pad.t+cH-h,over=v>goalVal;
     ctx.fillStyle=over?'rgba(239,68,68,.7)':fill;
     ctx.beginPath();ctx.roundRect(x,y,barW,h,4);ctx.fill();
     ctx.fillStyle=over?'#ef4444':color;
@@ -843,13 +804,296 @@ function deleteDay(date){
 // TABS
 // =====================================================================
 function showTab(t){
-  const tabIds=['resumo','refeicoes','agua','peso','treino','graficos','alertas','historico'];
+  const tabIds=['resumo','refeicoes','agua','peso','treino','graficos','alertas','historico','chat'];
   tabIds.forEach(x=>{const el=document.getElementById('tab-'+x);if(el)el.style.display=x===t?'block':'none';});
   document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',tabIds[i]===t));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-  const navMap={resumo:0,refeicoes:1,treino:2,peso:3,graficos:4};
+  const navMap={resumo:0,refeicoes:1,treino:2,peso:3,chat:4};
   if(navMap[t]!==undefined) document.querySelectorAll('.nav-btn')[navMap[t]]?.classList.add('active');
-  if(t==='agua')renderWater();
-  if(t==='graficos'){drawCharts();}
-  if(t==='alertas'){const goals=calcGoals(profile);const today=logs.filter(l=>l.date===todayKey());const tot=today.reduce((a,l)=>({cal:a.cal+l.cal,prot:a.prot+l.prot,carb:a.carb+l.carb,fat:a.fat+l.fat}),{cal:0,prot:0,carb:0,fat:0});renderAlerts(tot,goals);}
+  if(t==='agua') renderWater();
+  if(t==='graficos') drawCharts();
+  if(t==='alertas'){
+    const goals=calcGoals(profile);
+    const today=logs.filter(l=>l.date===todayKey());
+    const tot=today.reduce((a,l)=>({cal:a.cal+l.cal,prot:a.prot+l.prot,carb:a.carb+l.carb,fat:a.fat+l.fat}),{cal:0,prot:0,carb:0,fat:0});
+    renderAlerts(tot,goals);
+  }
+  if(t==='chat') initChat();
+}
+
+// =====================================================================
+// CHAT IA — GOOGLE GEMINI
+// =====================================================================
+const GEMINI_MODEL = 'gemini-1.5-flash';
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+
+let chatHistory = JSON.parse(localStorage.getItem('nt_chat') || '[]');
+let chatIsTyping = false;
+let chatInitialized = false;
+
+function getGeminiKey() {
+  return localStorage.getItem('nt_gemini_key') || '';
+}
+
+function saveGeminiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key) return;
+  localStorage.setItem('nt_gemini_key', key);
+  document.getElementById('apiKeyBanner').style.display = 'none';
+  appendMessage('ai', '✅ Chave configurada com sucesso! Agora pode me perguntar qualquer coisa sobre nutrição. 🥗');
+}
+
+function buildUserContext() {
+  if (!profile) return '';
+  const goals = calcGoals(profile);
+  const today = logs.filter(l => l.date === todayKey());
+  const tot = today.reduce((a, l) => ({
+    cal: a.cal + l.cal, prot: a.prot + l.prot,
+    carb: a.carb + l.carb, fat: a.fat + l.fat
+  }), { cal: 0, prot: 0, carb: 0, fat: 0 });
+  const goalLabels = { emagrecer: 'Emagrecimento', massa: 'Ganho de Massa', manter: 'Manutenção' };
+  const water = getWater();
+  const waterGoal = Math.round(profile.weight * 35);
+  const todayFoods = today.length
+    ? today.map(l => `${l.food} (${l.grams}g, ${l.cal}kcal) — ${l.meal}`).join('\n    ')
+    : 'Nenhum alimento registrado ainda hoje.';
+  const lastWeight = weights.length ? weights[weights.length - 1].val + ' kg' : 'Não informado';
+  return `
+=== DADOS DO USUÁRIO (Cuida App) ===
+Nome: ${profile.name}
+Peso atual: ${lastWeight}
+Altura: ${profile.height} cm
+Idade: ${profile.age} anos
+Sexo: ${profile.gender === 'M' ? 'Masculino' : 'Feminino'}
+Objetivo: ${goalLabels[profile.goal]}
+
+=== METAS DIÁRIAS ===
+Calorias: ${goals.cal} kcal
+Proteína: ${goals.prot}g
+Carboidrato: ${goals.carb}g
+Gordura: ${goals.fat}g
+
+=== CONSUMO DE HOJE ===
+Calorias: ${Math.round(tot.cal)} / ${goals.cal} kcal (${Math.round((tot.cal / goals.cal) * 100)}%)
+Proteína: ${Math.round(tot.prot)}g / ${goals.prot}g
+Carboidrato: ${Math.round(tot.carb)}g / ${goals.carb}g
+Gordura: ${Math.round(tot.fat)}g / ${goals.fat}g
+Água: ${water}ml / ${waterGoal}ml
+
+=== ALIMENTOS CONSUMIDOS HOJE ===
+    ${todayFoods}
+===================================`;
+}
+
+function buildSystemPrompt() {
+  return `Você é o "Nutri IA", assistente nutricional do app Cuida.
+Você é especialista em nutrição, dietas e fitness.
+Responda sempre em português brasileiro, de forma amigável, clara e motivadora.
+Use emojis com moderação para tornar a conversa mais dinâmica.
+Seja direto e prático nas respostas.
+Quando relevante, use os dados do perfil do usuário para personalizar suas respostas.
+Formate listas com • e destaque valores importantes em **negrito**.
+Não invente informações médicas — quando necessário, recomende consultar um nutricionista.
+
+${buildUserContext()}`;
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text || chatIsTyping) return;
+
+  const apiKey = getGeminiKey();
+  if (!apiKey) { showApiKeyBanner(); return; }
+
+  input.value = '';
+  input.style.height = 'auto';
+
+  const welcome = document.querySelector('.chat-welcome');
+  if (welcome) welcome.remove();
+
+  appendMessage('user', text);
+  chatHistory.push({ role: 'user', parts: [{ text }] });
+
+  showTyping();
+  chatIsTyping = true;
+  document.getElementById('chatSendBtn').disabled = true;
+  document.getElementById('chatStatus').textContent = '● Digitando...';
+  document.getElementById('chatStatus').className = 'chat-status typing';
+
+  try {
+    const recentHistory = chatHistory.slice(-10);
+    const body = {
+      system_instruction: { parts: [{ text: buildSystemPrompt() }] },
+      contents: recentHistory,
+      generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
+    };
+
+    const res = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err?.error?.message || `Erro HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!reply) throw new Error('Resposta vazia do Gemini.');
+
+    chatHistory.push({ role: 'model', parts: [{ text: reply }] });
+    localStorage.setItem('nt_chat', JSON.stringify(chatHistory.slice(-20)));
+
+    removeTyping();
+    appendMessage('ai', reply);
+
+  } catch (err) {
+    removeTyping();
+    let errorMsg = '⚠️ Erro ao conectar com o Gemini.';
+    if (err.message.includes('API_KEY_INVALID') || err.message.includes('400')) {
+      errorMsg = '🔑 Chave de API inválida. Verifique e salve novamente.';
+      showApiKeyBanner();
+    } else if (err.message.includes('QUOTA_EXCEEDED') || err.message.includes('429')) {
+      errorMsg = '⏳ Limite de requisições atingido. Aguarde um momento e tente novamente.';
+    } else {
+      errorMsg += ` ${err.message}`;
+    }
+    appendMessage('ai', errorMsg);
+  } finally {
+    chatIsTyping = false;
+    document.getElementById('chatSendBtn').disabled = false;
+    document.getElementById('chatStatus').textContent = '● Online';
+    document.getElementById('chatStatus').className = 'chat-status';
+  }
+}
+
+function sendSuggestion(btn) {
+  document.getElementById('chatInput').value = btn.textContent.replace(/^[\p{Emoji}\s]+/u, '').trim();
+  sendChatMessage();
+}
+
+function handleChatKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendChatMessage();
+  }
+}
+
+function autoResizeTextarea(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function appendMessage(role, text) {
+  const container = document.getElementById('chatMessages');
+  const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const div = document.createElement('div');
+  div.className = `chat-msg ${role}`;
+  div.innerHTML = `
+    <div class="chat-msg-avatar">${role === 'ai' ? '🥗' : '👤'}</div>
+    <div>
+      <div class="chat-msg-bubble">${formatAIText(text)}</div>
+      <div class="chat-msg-time">${time}</div>
+    </div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function formatAIText(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`(.*?)`/g, '<span class="highlight">$1</span>')
+    .replace(/^• (.+)$/gm, '<li>$1</li>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
+    .replace(/\n{2,}/g, '<br><br>')
+    .replace(/\n/g, '<br>');
+}
+
+function showTyping() {
+  const container = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'chat-msg ai';
+  div.id = 'typingIndicator';
+  div.innerHTML = `
+    <div class="chat-msg-avatar">🥗</div>
+    <div class="chat-msg-bubble" style="padding:14px 16px">
+      <div class="typing-indicator">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>
+    </div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function removeTyping() {
+  document.getElementById('typingIndicator')?.remove();
+}
+
+function clearChat() {
+  if (!confirm('Limpar toda a conversa?')) return;
+  chatHistory = [];
+  localStorage.removeItem('nt_chat');
+  chatInitialized = false;
+  document.getElementById('chatMessages').innerHTML = `
+    <div class="chat-welcome">
+      <div class="chat-welcome-icon">🥗</div>
+      <div class="chat-welcome-title">Olá! Sou o Nutri IA</div>
+      <div class="chat-welcome-sub">Seu assistente nutricional inteligente. Posso analisar sua dieta, sugerir refeições e responder dúvidas sobre nutrição!</div>
+      <div class="chat-suggestions">
+        <button class="suggestion-btn" onclick="sendSuggestion(this)">📊 Como está minha dieta hoje?</button>
+        <button class="suggestion-btn" onclick="sendSuggestion(this)">🍽️ Sugestão de refeição para bater minha meta</button>
+        <button class="suggestion-btn" onclick="sendSuggestion(this)">💪 Quanto de proteína devo consumir?</button>
+        <button class="suggestion-btn" onclick="sendSuggestion(this)">🥦 Alimentos ricos em proteína e baixo em calorias</button>
+      </div>
+    </div>`;
+}
+
+function showApiKeyBanner() {
+  const existing = document.getElementById('apiKeyBanner');
+  if (existing) { existing.style.display = 'flex'; return; }
+  const container = document.getElementById('chatMessages');
+  const banner = document.createElement('div');
+  banner.id = 'apiKeyBanner';
+  banner.className = 'api-key-banner';
+  banner.innerHTML = `
+    <div class="api-key-banner-title">🔑 Configure sua chave Gemini</div>
+    <div class="api-key-banner-sub">
+      Para usar o chat, você precisa de uma chave gratuita do Google Gemini.<br>
+      1. Acesse <strong>aistudio.google.com</strong><br>
+      2. Clique em <strong>"Get API Key"</strong><br>
+      3. Cole a chave abaixo e salve.
+    </div>
+    <div class="api-key-input-row">
+      <input type="password" id="apiKeyInput" placeholder="AIza..." value="${getGeminiKey()}"/>
+      <button class="api-key-save-btn" onclick="saveGeminiKey()">Salvar</button>
+    </div>`;
+  container.appendChild(banner);
+  container.scrollTop = container.scrollHeight;
+}
+
+function initChat() {
+  if (chatInitialized) return;
+  chatInitialized = true;
+
+  if (chatHistory.length > 0) {
+    const welcome = document.querySelector('.chat-welcome');
+    if (welcome) welcome.remove();
+    const container = document.getElementById('chatMessages');
+    container.innerHTML = '';
+    chatHistory.forEach(msg => {
+      if (msg.role === 'user') appendMessage('user', msg.parts[0].text);
+      if (msg.role === 'model') appendMessage('ai', msg.parts[0].text);
+    });
+  }
+
+  if (!getGeminiKey()) {
+    setTimeout(showApiKeyBanner, 300);
+  }
     }
