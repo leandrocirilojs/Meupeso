@@ -903,7 +903,7 @@ let chatInitialized = false;
 
 
   
-}
+
 
 function buildUserContext() {
 
