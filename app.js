@@ -840,14 +840,17 @@ function showTab(t){
 // =====================================================================
 
 function extractFoodJSON(text){
-  const match = text.match(/```json([\s\S]*?)```/);
+
+  const match = text.match(/\{[\s\S]*"foods"[\s\S]*\}/);
+
   if(!match) return null;
 
   try{
-    return JSON.parse(match[1]);
+    return JSON.parse(match[0]);
   }catch(e){
     return null;
   }
+
 }
 
 function addFoodsFromAI(foodList){
