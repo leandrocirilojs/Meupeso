@@ -1059,7 +1059,7 @@ async function sendChatMessage() {
       generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
     };
 
-    const res = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+    const res = await fetch(GEMINI_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
