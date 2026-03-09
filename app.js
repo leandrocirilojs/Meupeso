@@ -835,9 +835,21 @@ function showTab(t){
 
 
 
+
 // =====================================================================
 // CHAT IA — GOOGLE GEMINI
 // =====================================================================
+
+const GEMINI_API_URL = "https://fleandrocirilopeixoto.workers.dev";
+
+let chatHistory = JSON.parse(localStorage.getItem('nt_chat') || '[]');
+let chatIsTyping = false;
+let chatInitialized = false;
+
+
+// =========================
+// EXTRAIR JSON DA RESPOSTA
+// =========================
 
 function extractFoodJSON(text){
 
@@ -853,6 +865,11 @@ function extractFoodJSON(text){
 
 }
 
+
+// =========================
+// ADICIONAR ALIMENTOS DA IA
+// =========================
+
 function addFoodsFromAI(foodList){
 
   if(!foodList || !foodList.length) return;
@@ -860,7 +877,7 @@ function addFoodsFromAI(foodList){
   foodList.forEach(item=>{
 
     const food = FOODS.find(f =>
-      f.n.toLowerCase().includes(item.name.toLowerCase())
+      item.name.toLowerCase().includes(f.n.toLowerCase())
     );
 
     if(!food) return;
@@ -886,28 +903,17 @@ function addFoodsFromAI(foodList){
 
   save('nt_logs', logs);
   updateUI();
+
 }
 
 
+// =========================
+// CONTEXTO DO USUÁRIO
+// =========================
 
-const GEMINI_MODEL = 'gemini-2.0-flash';
-const GEMINI_API_URL =
-`https://fleandrocirilopeixoto.workers.dev`;
+function buildUserContext(){
 
-let chatHistory = JSON.parse(localStorage.getItem('nt_chat') || '[]');
-let chatIsTyping = false;
-let chatInitialized = false;
-
-
-
-
-
-  
-
-
-function buildUserContext() {
-
-  if (!profile) return '';
+  if(!profile) return '';
 
   const goals = calcGoals(profile);
 
@@ -944,7 +950,13 @@ Gordura: ${Math.round(tot.fat)}g
 Alimentos hoje:
 ${todayFoods}
 `;
+
 }
+
+
+// =========================
+// PROMPT DO SISTEMA
+// =========================
 
 function buildSystemPrompt(){
 
@@ -963,8 +975,6 @@ Ajude o usuário com:
 • análise alimentar
 
 Use linguagem simples e amigável.
-
-Use os dados do usuário quando necessário.
 
 ${buildUserContext()}
 
@@ -986,231 +996,223 @@ Formato obrigatório:
 
 Regras:
 
-• O JSON deve ficar no FINAL da resposta
-• Apenas alimentos realmente citados
+• O JSON deve ficar no FINAL da resposta  
+• Apenas alimentos realmente citados  
 • Sempre usar gramas aproximadas
 `;
 }
 
 
+// =========================
+// ENVIAR MENSAGEM
+// =========================
 
+async function sendChatMessage(){
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-async function sendChatMessage() {
   const input = document.getElementById('chatInput');
   const text = input.value.trim();
-  if (!text || chatIsTyping) return;
 
-  // usando proxy worker, não precisa API key no frontend
+  if(!text || chatIsTyping) return;
+
   input.value = '';
   input.style.height = 'auto';
 
   const welcome = document.querySelector('.chat-welcome');
-  if (welcome) welcome.remove();
+  if(welcome) welcome.remove();
 
   appendMessage('user', text);
-  chatHistory.push({ role: 'user', parts: [{ text }] });
+
+  chatHistory.push({ role:'user', parts:[{ text }] });
 
   showTyping();
+
   chatIsTyping = true;
+
   document.getElementById('chatSendBtn').disabled = true;
   document.getElementById('chatStatus').textContent = '● Digitando...';
   document.getElementById('chatStatus').className = 'chat-status typing';
 
-  try {
+  try{
+
     const recentHistory = chatHistory.slice(-10);
+
     const body = {
-      system_instruction: { parts: [{ text: buildSystemPrompt() }] },
+      system_instruction:{ parts:[{ text: buildSystemPrompt() }] },
       contents: recentHistory,
-      generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
+      generationConfig:{ temperature:0.7, maxOutputTokens:1024 }
     };
 
-    const res = await fetch(GEMINI_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const res = await fetch(GEMINI_API_URL,{
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
       body: JSON.stringify(body)
     });
 
-    if (!res.ok) {
+    if(!res.ok){
       const err = await res.json();
       throw new Error(err?.error?.message || `Erro HTTP ${res.status}`);
     }
 
     const data = await res.json();
-    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!reply) throw new Error('Resposta vazia do Gemini.');
 
-    chatHistory.push({ role: 'model', parts: [{ text: reply }] });
+    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if(!reply) throw new Error('Resposta vazia do Gemini.');
+
+    chatHistory.push({ role:'model', parts:[{ text: reply }] });
+
     localStorage.setItem('nt_chat', JSON.stringify(chatHistory.slice(-20)));
 
     removeTyping();
 
-
-    
-    //troquei 
-    //appendMessage('ai', reply);
-    //por
     const visibleReply = reply.replace(/```json[\s\S]*?```/, '').trim();
-appendMessage('ai', visibleReply);
 
-    
+    appendMessage('ai', visibleReply);
 
-const foodData = extractFoodJSON(reply);
+    const foodData = extractFoodJSON(reply);
 
-if (foodData && foodData.foods) {
-  addFoodsFromAI(foodData.foods);
-}
+    if(foodData && foodData.foods){
+      addFoodsFromAI(foodData.foods);
+    }
 
-} catch (err) {
+  }catch(err){
 
-  removeTyping();
+    removeTyping();
 
-  let errorMsg = '⚠️ Erro ao conectar com o Gemini.';
+    let errorMsg = '⚠️ Erro ao conectar com o Gemini.';
 
-  if (err.message.includes('429') || err.message.includes('QUOTA_EXCEEDED')) {
-    errorMsg = '⏳ Muitas requisições. Aguarde alguns segundos e tente novamente.';
-  } else {
-    errorMsg += ` ${err.message}`;
+    if(err.message.includes('429') || err.message.includes('QUOTA_EXCEEDED')){
+      errorMsg = '⏳ Muitas requisições. Aguarde alguns segundos e tente novamente.';
+    }else{
+      errorMsg += ` ${err.message}`;
+    }
+
+    appendMessage('ai', errorMsg);
+
+  }finally{
+
+    chatIsTyping = false;
+
+    document.getElementById('chatSendBtn').disabled = false;
+
+    document.getElementById('chatStatus').textContent = '● Online';
+    document.getElementById('chatStatus').className = 'chat-status';
+
   }
 
-  appendMessage('ai', errorMsg);
-
-} finally {
-
-  chatIsTyping = false;
-  document.getElementById('chatSendBtn').disabled = false;
-  document.getElementById('chatStatus').textContent = '● Online';
-  document.getElementById('chatStatus').className = 'chat-status';
-
 }
 
 
-function sendSuggestion(btn) {
-  document.getElementById('chatInput').value = btn.textContent.replace(/^[\p{Emoji}\s]+/u, '').trim();
-  sendChatMessage();
-}
+// =========================
+// UI DO CHAT
+// =========================
 
-function handleChatKey(e) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendChatMessage();
-  }
-}
+function appendMessage(role,text){
 
-function autoResizeTextarea(el) {
-  el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-}
-
-function appendMessage(role, text) {
   const container = document.getElementById('chatMessages');
-  const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+  const time = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+
   const div = document.createElement('div');
+
   div.className = `chat-msg ${role}`;
+
   div.innerHTML = `
-    <div class="chat-msg-avatar">${role === 'ai' ? '🥗' : '👤'}</div>
+    <div class="chat-msg-avatar">${role==='ai'?'🥗':'👤'}</div>
     <div>
       <div class="chat-msg-bubble">${formatAIText(text)}</div>
       <div class="chat-msg-time">${time}</div>
     </div>`;
+
   container.appendChild(div);
+
   container.scrollTop = container.scrollHeight;
+
 }
 
-function formatAIText(text) {
+
+function formatAIText(text){
+
   return text
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/`(.*?)`/g, '<span class="highlight">$1</span>')
-    .replace(/^• (.+)$/gm, '<li>$1</li>')
-    .replace(/^- (.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
-    .replace(/\n{2,}/g, '<br><br>')
-    .replace(/\n/g, '<br>');
+  .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+  .replace(/\*(.*?)\*/g,'<em>$1</em>')
+  .replace(/\n/g,'<br>');
+
 }
 
-function showTyping() {
+
+// =========================
+// TYPING
+// =========================
+
+function showTyping(){
+
   const container = document.getElementById('chatMessages');
+
   const div = document.createElement('div');
-  div.className = 'chat-msg ai';
-  div.id = 'typingIndicator';
-  div.innerHTML = `
+
+  div.className='chat-msg ai';
+
+  div.id='typingIndicator';
+
+  div.innerHTML=`
     <div class="chat-msg-avatar">🥗</div>
-    <div class="chat-msg-bubble" style="padding:14px 16px">
-      <div class="typing-indicator">
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-      </div>
-    </div>`;
+    <div class="chat-msg-bubble">Digitando...</div>`;
+
   container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
+
 }
 
-function removeTyping() {
+
+function removeTyping(){
+
   document.getElementById('typingIndicator')?.remove();
-}
 
-function clearChat() {
-  if (!confirm('Limpar toda a conversa?')) return;
-  chatHistory = [];
-  localStorage.removeItem('nt_chat');
-  chatInitialized = false;
-  document.getElementById('chatMessages').innerHTML = `
-    <div class="chat-welcome">
-      <div class="chat-welcome-icon">🥗</div>
-      <div class="chat-welcome-title">Olá! Sou o Nutri IA</div>
-      <div class="chat-welcome-sub">Seu assistente nutricional inteligente. Posso analisar sua dieta, sugerir refeições e responder dúvidas sobre nutrição!</div>
-      <div class="chat-suggestions">
-        <button class="suggestion-btn" onclick="sendSuggestion(this)">📊 Como está minha dieta hoje?</button>
-        <button class="suggestion-btn" onclick="sendSuggestion(this)">🍽️ Sugestão de refeição para bater minha meta</button>
-        <button class="suggestion-btn" onclick="sendSuggestion(this)">💪 Quanto de proteína devo consumir?</button>
-        <button class="suggestion-btn" onclick="sendSuggestion(this)">🥦 Alimentos ricos em proteína e baixo em calorias</button>
-      </div>
-    </div>`;
 }
 
 
+// =========================
+// INIT CHAT
+// =========================
 
-function initChat() {
-  if (chatInitialized) return;
+function initChat(){
+
+  if(chatInitialized) return;
+
   chatInitialized = true;
 
-  if (chatHistory.length > 0) {
-    const welcome = document.querySelector('.chat-welcome');
-    if (welcome) welcome.remove();
-    const container = document.getElementById('chatMessages');
-    container.innerHTML = '';
-    chatHistory.forEach(msg => {
-      if (msg.role === 'user') appendMessage('user', msg.parts[0].text);
-      if (msg.role === 'model') appendMessage('ai', msg.parts[0].text);
+  if(chatHistory.length>0){
+
+    const welcome=document.querySelector('.chat-welcome');
+
+    if(welcome) welcome.remove();
+
+    const container=document.getElementById('chatMessages');
+
+    container.innerHTML='';
+
+    chatHistory.forEach(msg=>{
+
+      if(msg.role==='user') appendMessage('user', msg.parts[0].text);
+
+      if(msg.role==='model') appendMessage('ai', msg.parts[0].text);
+
     });
+
   }
 
-    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+  
