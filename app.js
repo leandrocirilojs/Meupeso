@@ -1198,28 +1198,7 @@ function clearChat() {
     </div>`;
 }
 
-function showApiKeyBanner() {
-  const existing = document.getElementById('apiKeyBanner');
-  if (existing) { existing.style.display = 'flex'; return; }
-  const container = document.getElementById('chatMessages');
-  const banner = document.createElement('div');
-  banner.id = 'apiKeyBanner';
-  banner.className = 'api-key-banner';
-  banner.innerHTML = `
-    <div class="api-key-banner-title">🔑 Configure sua chave Gemini</div>
-    <div class="api-key-banner-sub">
-      Para usar o chat, você precisa de uma chave gratuita do Google Gemini.<br>
-      1. Acesse <strong>aistudio.google.com</strong><br>
-      2. Clique em <strong>"Get API Key"</strong><br>
-      3. Cole a chave abaixo e salve.
-    </div>
-    <div class="api-key-input-row">
-      <input type="password" id="apiKeyInput" placeholder="AIza..." value="${getGeminiKey()}"/>
-      <button class="api-key-save-btn" onclick="saveGeminiKey()">Salvar</button>
-    </div>`;
-  container.appendChild(banner);
-  container.scrollTop = container.scrollHeight;
-}
+
 
 function initChat() {
   if (chatInitialized) return;
