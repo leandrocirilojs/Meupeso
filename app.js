@@ -895,13 +895,8 @@ let chatHistory = JSON.parse(localStorage.getItem('nt_chat') || '[]');
 let chatIsTyping = false;
 let chatInitialized = false;
 
-function getGeminiKey() {
-  return localStorage.getItem('nt_gemini_key') || '';
-}
 
-function saveGeminiKey() {
- // const key = document.getElementById('apiKeyInput').value.trim();
-const key = 'AIzaSyARfqpZz401gmgsGlSzK8jNDc2KEWGATtE'
+
 
 
   
@@ -1033,9 +1028,7 @@ async function sendChatMessage() {
   const text = input.value.trim();
   if (!text || chatIsTyping) return;
 
-  const apiKey = getGeminiKey();
-  if (!apiKey) { showApiKeyBanner(); return; }
-
+  // usando proxy worker, não precisa API key no frontend
   input.value = '';
   input.style.height = 'auto';
 
