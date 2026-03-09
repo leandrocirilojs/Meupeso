@@ -901,7 +901,7 @@ function getGeminiKey() {
 
 function saveGeminiKey() {
  // const key = document.getElementById('apiKeyInput').value.trim();
-const key = 'AIzaSyARfqpZz401gmgsGlSzK8jNDc2KEWGATtE'
+const key = 'AIzaSyClqN0yPDDNqrb8fyN0hw_27vqJzPYdugQ'
 
 
   
