@@ -831,7 +831,7 @@ function showTab(t){
 
 // Usando gemini-1.5-flash (mais generoso na tier gratuita)
 // Quando sua cota do gemini-2.0-flash renovar, pode trocar de volta
-const GEMINI_MODEL = 'gemini-1.5-flash';
+const GEMINI_MODEL = 'gemini-1.5-flash-latest';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 let chatHistory = JSON.parse(localStorage.getItem('nt_chat') || '[]');
