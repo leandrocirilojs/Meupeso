@@ -21,6 +21,15 @@ const offCache = {};
 const TOTAL_STEPS = 3;
 const MEALS = ['Café da manhã','Almoço','Lanche','Jantar','Pré-treino','Pós-treino'];
 
+
+
+//testando vercel
+
+const BACKEND_URL = 'https://cuida-seven.vercel.app/api/chat';
+
+
+
+
 function todayKey(){ return new Date().toLocaleDateString('pt-BR'); }
 function getWater(){ return waterStore[todayKey()]||0; }
 function setWaterVal(v){ waterStore[todayKey()]=v; localStorage.setItem('nt_water',JSON.stringify(waterStore)); }
