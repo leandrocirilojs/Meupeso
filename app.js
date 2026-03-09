@@ -358,7 +358,11 @@ function renderMealLog(today){
     const total=items.reduce((a,l)=>({cal:a.cal+l.cal}),{cal:0});
     html+=`<div class="meal-section"><div class="meal-header">🍽️ ${m} <span class="tag">${Math.round(total.cal)} kcal</span></div><div class="card" style="margin-top:0;padding:0;overflow:hidden">`;
     items.forEach(item=>{
-      const srcBadge = item.source==='off' ? `<span class="badge-off">OFF</span>` : `<span class="badge-local">LOCAL</span>`;
+      const srcBadge = item.source==='off'
+        ? `<span class="badge-off">OFF</span>`
+        : item.source==='ai'
+        ? `<span class="badge-ai">IA</span>`
+        : `<span class="badge-local">LOCAL</span>`;
       html+=`<div class="log-item"><div><div class="log-food">${item.food} ${srcBadge}</div><div class="log-detail">${item.grams}g · ${item.time}${item.brand?' · '+item.brand:''}</div></div>
       <div style="display:flex;align-items:center;gap:4px"><div style="text-align:right"><div class="log-kcal">${item.cal} kcal</div><div class="log-macros">P:${item.prot}g C:${item.carb}g G:${item.fat}g</div></div>
       <button class="delete-btn" onclick="deleteLog(${item.id})">🗑</button></div></div>`;
@@ -821,75 +825,14 @@ function showTab(t){
   if(t==='chat') initChat();
 }
 
-
-
-
-
-
-
 // =====================================================================
 // CHAT IA — GOOGLE GEMINI
 // =====================================================================
 
-
-
-
-
-// =====================================================================
-// CHAT IA — GOOGLE GEMINI
-// =====================================================================
-
-function extractFoodJSON(text){
-  const match = text.match(/```json([\s\S]*?)```/);
-  if(!match) return null;
-
-  try{
-    return JSON.parse(match[1]);
-  }catch(e){
-    return null;
-  }
-}
-
-function addFoodsFromAI(foodList){
-
-  if(!foodList || !foodList.length) return;
-
-  foodList.forEach(item=>{
-
-    const food = FOODS.find(f =>
-      f.n.toLowerCase().includes(item.name.toLowerCase())
-    );
-
-    if(!food) return;
-
-    const grams = item.grams || 100;
-    const factor = grams / 100;
-
-    logs.push({
-      id: Date.now() + Math.random(),
-      date: todayKey(),
-      time: new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
-      meal: selectedMeal,
-      food: food.n,
-      grams: grams,
-      cal: Math.round(food.c * factor),
-      prot: Math.round(food.p * factor * 10) / 10,
-      carb: Math.round(food.ch * factor * 10) / 10,
-      fat: Math.round(food.g * factor * 10) / 10,
-      source: 'ai'
-    });
-
-  });
-
-  save('nt_logs', logs);
-  updateUI();
-}
-
-
-
+// Usando gemini-1.5-flash (mais generoso na tier gratuita)
+// Quando sua cota do gemini-2.0-flash renovar, pode trocar de volta
 const GEMINI_MODEL = 'gemini-1.5-flash';
-const GEMINI_API_URL =
-`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 let chatHistory = JSON.parse(localStorage.getItem('nt_chat') || '[]');
 let chatIsTyping = false;
@@ -900,133 +843,76 @@ function getGeminiKey() {
 }
 
 function saveGeminiKey() {
- // const key = document.getElementById('apiKeyInput').value.trim();
-const key = 'AIzaSyClqN0yPDDNqrb8fyN0hw_27vqJzPYdugQ'
-
-
-  
+  const input = document.getElementById('apiKeyInput');
+  const key = input ? input.value.trim() : '';
   if (!key) return;
   localStorage.setItem('nt_gemini_key', key);
-  document.getElementById('apiKeyBanner').style.display = 'none';
-  appendMessage('ai', '✅ Chave configurada com sucesso! Agora pode me perguntar qualquer coisa sobre nutrição.');
+  const banner = document.getElementById('apiKeyBanner');
+  if (banner) banner.style.display = 'none';
+  appendMessage('ai', '✅ Chave configurada! Agora pode me perguntar qualquer coisa sobre nutrição.');
+}
+
+function extractFoodJSON(text) {
+  const match = text.match(/```json([\s\S]*?)```/);
+  if (!match) return null;
+  try { return JSON.parse(match[1]); } catch(e) { return null; }
+}
+
+function addFoodsFromAI(foodList) {
+  if (!foodList || !foodList.length) return;
+  foodList.forEach(item => {
+    const food = FOODS.find(f => f.n.toLowerCase().includes(item.name.toLowerCase()));
+    if (!food) return;
+    const grams = item.grams || 100;
+    const factor = grams / 100;
+    logs.push({
+      id: Date.now() + Math.random(),
+      date: todayKey(),
+      time: new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+      meal: selectedMeal,
+      food: food.n,
+      grams,
+      cal: Math.round(food.c * factor),
+      prot: Math.round(food.p * factor * 10) / 10,
+      carb: Math.round(food.ch * factor * 10) / 10,
+      fat: Math.round(food.g * factor * 10) / 10,
+      source: 'ai'
+    });
+  });
+  save('nt_logs', logs);
+  updateUI();
 }
 
 function buildUserContext() {
-
   if (!profile) return '';
-
   const goals = calcGoals(profile);
-
   const today = logs.filter(l => l.date === todayKey());
-
-  const tot = today.reduce((a,l)=>({
-    cal:a.cal+l.cal,
-    prot:a.prot+l.prot,
-    carb:a.carb+l.carb,
-    fat:a.fat+l.fat
-  }),{cal:0,prot:0,carb:0,fat:0});
-
+  const tot = today.reduce((a,l)=>({cal:a.cal+l.cal,prot:a.prot+l.prot,carb:a.carb+l.carb,fat:a.fat+l.fat}),{cal:0,prot:0,carb:0,fat:0});
   const todayFoods = today.length
     ? today.map(l => `${l.food} (${l.grams}g)`).join(', ')
     : 'Nenhum alimento registrado hoje';
-
   return `
 Usuário: ${profile.name}
-
 Objetivo: ${profile.goal}
-
-Metas diárias:
-Calorias: ${goals.cal}
-Proteína: ${goals.prot}g
-Carboidrato: ${goals.carb}g
-Gordura: ${goals.fat}g
-
-Consumo hoje:
-Calorias: ${Math.round(tot.cal)}
-Proteína: ${Math.round(tot.prot)}g
-Carboidrato: ${Math.round(tot.carb)}g
-Gordura: ${Math.round(tot.fat)}g
-
-Alimentos hoje:
-${todayFoods}
+Metas diárias — Cal: ${goals.cal} | Prot: ${goals.prot}g | Carb: ${goals.carb}g | Gord: ${goals.fat}g
+Consumo hoje — Cal: ${Math.round(tot.cal)} | Prot: ${Math.round(tot.prot)}g | Carb: ${Math.round(tot.carb)}g | Gord: ${Math.round(tot.fat)}g
+Alimentos hoje: ${todayFoods}
 `;
 }
 
-function buildSystemPrompt(){
-
-return `
-Você é o Nutri IA, assistente nutricional do aplicativo Cuida.
-
-Responda sempre em português do Brasil.
-
-Ajude o usuário com:
-
-• nutrição
-• dieta
-• calorias
-• proteínas
-• sugestões de refeições
-• análise alimentar
-
-Use linguagem simples e amigável.
-
+function buildSystemPrompt() {
+  return `Você é o Nutri IA, assistente nutricional do aplicativo Cuida.
+Responda sempre em português do Brasil. Use linguagem simples e amigável.
+Ajude com nutrição, dieta, calorias, proteínas, sugestões de refeições e análise alimentar.
 Use os dados do usuário quando necessário.
-
 ${buildUserContext()}
-
-IMPORTANTE:
-
-Se o usuário disser que comeu algum alimento,
-extraia os alimentos mencionados e gere um JSON no final da resposta.
-
+IMPORTANTE: Se o usuário disser que comeu algum alimento, extraia-os e gere um JSON no FINAL da resposta.
 Formato obrigatório:
-
 \`\`\`json
-{
- "foods":[
-   {"name":"ovo","grams":100},
-   {"name":"banana","grams":120}
- ]
-}
+{"foods":[{"name":"ovo","grams":100},{"name":"banana","grams":120}]}
 \`\`\`
-
-Regras:
-
-• O JSON deve ficar no FINAL da resposta
-• Apenas alimentos realmente citados
-• Sempre usar gramas aproximadas
-`;
+Regras: JSON só no final, apenas alimentos citados, gramas aproximadas.`;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 async function sendChatMessage() {
   const input = document.getElementById('chatInput');
@@ -1052,10 +938,9 @@ async function sendChatMessage() {
   document.getElementById('chatStatus').className = 'chat-status typing';
 
   try {
-    const recentHistory = chatHistory.slice(-10);
     const body = {
       system_instruction: { parts: [{ text: buildSystemPrompt() }] },
-      contents: recentHistory,
+      contents: chatHistory.slice(-10),
       generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
     };
 
@@ -1078,34 +963,24 @@ async function sendChatMessage() {
     localStorage.setItem('nt_chat', JSON.stringify(chatHistory.slice(-20)));
 
     removeTyping();
-
-
-    
-    //troquei 
-    //appendMessage('ai', reply);
-    //por
     appendMessage('ai', reply);
 
-const foodData = extractFoodJSON(reply);
-
-if(foodData && foodData.foods){
-  addFoodsFromAI(foodData.foods);
-}
-
-
-
-
-
-    
+    const foodData = extractFoodJSON(reply);
+    if (foodData && foodData.foods) addFoodsFromAI(foodData.foods);
 
   } catch (err) {
     removeTyping();
     let errorMsg = '⚠️ Erro ao conectar com o Gemini.';
-    if (err.message.includes('API_KEY_INVALID') || err.message.includes('400')) {
+    if (err.message.includes('API_KEY_INVALID') || err.message.includes('401') || err.message.includes('403')) {
       errorMsg = '🔑 Chave de API inválida. Verifique e salve novamente.';
       showApiKeyBanner();
-    } else if (err.message.includes('QUOTA_EXCEEDED') || err.message.includes('429')) {
-      errorMsg = '⏳ Limite de requisições atingido. Aguarde um momento e tente novamente.';
+    } else if (
+      err.message.toLowerCase().includes('quota') ||
+      err.message.includes('429') ||
+      err.message.includes('RESOURCE_EXHAUSTED')
+    ) {
+      errorMsg = '⏳ Limite da chave atingido. Gere uma nova chave gratuita em aistudio.google.com/app/apikey e salve novamente.';
+      showApiKeyBanner();
     } else {
       errorMsg += ` ${err.message}`;
     }
@@ -1201,6 +1076,7 @@ function clearChat() {
         <button class="suggestion-btn" onclick="sendSuggestion(this)">🥦 Alimentos ricos em proteína e baixo em calorias</button>
       </div>
     </div>`;
+  initChat();
 }
 
 function showApiKeyBanner() {
@@ -1214,8 +1090,8 @@ function showApiKeyBanner() {
     <div class="api-key-banner-title">🔑 Configure sua chave Gemini</div>
     <div class="api-key-banner-sub">
       Para usar o chat, você precisa de uma chave gratuita do Google Gemini.<br>
-      1. Acesse <strong>aistudio.google.com</strong><br>
-      2. Clique em <strong>"Get API Key"</strong><br>
+      1. Acesse <strong>aistudio.google.com/app/apikey</strong><br>
+      2. Clique em <strong>"Create API Key"</strong><br>
       3. Cole a chave abaixo e salve.
     </div>
     <div class="api-key-input-row">
@@ -1244,4 +1120,4 @@ function initChat() {
   if (!getGeminiKey()) {
     setTimeout(showApiKeyBanner, 300);
   }
-                }
+}
