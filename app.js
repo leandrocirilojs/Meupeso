@@ -1211,7 +1211,4 @@ function initChat() {
     });
   }
 
-  if (!getGeminiKey()) {
-    setTimeout(showApiKeyBanner, 300);
-  }
     }
