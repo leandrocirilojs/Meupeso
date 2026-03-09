@@ -826,7 +826,7 @@ function showTab(t){
 }
 
 // =====================================================================
-// CHAT IA — GROQ (chave do usuário via banner)
+// CHAT IA — GROQ (chave inserida pelo usuário via banner)
 // =====================================================================
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
@@ -903,12 +903,16 @@ Responda sempre em português do Brasil. Use linguagem simples e amigável.
 Ajude com nutrição, dieta, calorias, proteínas, sugestões de refeições e análise alimentar.
 Use os dados do usuário quando necessário.
 ${buildUserContext()}
-IMPORTANTE: Se o usuário disser que comeu algum alimento, extraia-os e gere um JSON no FINAL da resposta.
-Formato obrigatório:
+REGRAS CRÍTICAS SOBRE REGISTRO DE ALIMENTOS:
+- Os alimentos listados em "Alimentos hoje" JÁ FORAM REGISTRADOS anteriormente. NUNCA os inclua no JSON novamente.
+- Só gere o bloco JSON se o usuário mencionar EXPLICITAMENTE na mensagem atual que acabou de comer algo novo.
+- Se o usuário perguntar sobre sua dieta, análise ou sugestões, NÃO gere JSON.
+- Se gerar JSON, inclua APENAS os alimentos mencionados na mensagem atual do usuário.
+Formato do JSON (somente quando necessário):
 \`\`\`json
 {"foods":[{"name":"ovo","grams":100},{"name":"banana","grams":120}]}
 \`\`\`
-Regras: JSON só no final, apenas alimentos citados, gramas aproximadas.`;
+Regras: JSON só no final, apenas alimentos NOVOS citados pelo usuário agora, gramas aproximadas.`;
 }
 
 async function sendChatMessage() {
@@ -1124,4 +1128,4 @@ function initChat() {
   if (!getGroqKey()) {
     setTimeout(showApiKeyBanner, 300);
   }
-  }
+}
