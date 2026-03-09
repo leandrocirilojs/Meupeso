@@ -923,13 +923,11 @@ Formato obrigatório:
 Regras: JSON só no final, apenas alimentos citados, gramas aproximadas.`;
 }
 
+
 async function sendChatMessage() {
   const input = document.getElementById('chatInput');
   const text = input.value.trim();
   if (!text || chatIsTyping) return;
-
-  const apiKey = getGroqKey();
-  if (!apiKey) { showApiKeyBanner(); return; }
 
   input.value = '';
   input.style.height = 'auto';
@@ -947,34 +945,25 @@ async function sendChatMessage() {
   document.getElementById('chatStatus').className = 'chat-status typing';
 
   try {
-    // Groq usa formato OpenAI — messages com role/content
     const messages = [
       { role: 'system', content: buildSystemPrompt() },
       ...chatHistory.slice(-10)
     ];
 
-    const res = await fetch(GROQ_API_URL, {
+    const res = await fetch(BACKEND_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: GROQ_MODEL,
-        messages,
-        temperature: 0.7,
-        max_tokens: 1024
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages })
     });
 
     if (!res.ok) {
       const err = await res.json();
-      throw new Error(err?.error?.message || `Erro HTTP ${res.status}`);
+      throw new Error(err?.error || `Erro HTTP ${res.status}`);
     }
 
     const data = await res.json();
     const reply = data?.choices?.[0]?.message?.content;
-    if (!reply) throw new Error('Resposta vazia do Groq.');
+    if (!reply) throw new Error('Resposta vazia.');
 
     chatHistory.push({ role: 'assistant', content: reply });
     localStorage.setItem('nt_chat', JSON.stringify(chatHistory.slice(-20)));
@@ -987,16 +976,7 @@ async function sendChatMessage() {
 
   } catch (err) {
     removeTyping();
-    let errorMsg = '⚠️ Erro ao conectar com o Groq.';
-    if (err.message.includes('401') || err.message.includes('invalid_api_key') || err.message.includes('Unauthorized')) {
-      errorMsg = '🔑 Chave inválida. Verifique sua chave em console.groq.com e salve novamente.';
-      showApiKeyBanner();
-    } else if (err.message.includes('429') || err.message.toLowerCase().includes('rate limit')) {
-      errorMsg = '⏳ Limite temporário atingido. Aguarde alguns segundos e tente novamente.';
-    } else {
-      errorMsg += ` ${err.message}`;
-    }
-    appendMessage('ai', errorMsg);
+    appendMessage('ai', `⚠️ Erro ao conectar com o assistente. ${err.message}`);
   } finally {
     chatIsTyping = false;
     document.getElementById('chatSendBtn').disabled = false;
@@ -1004,6 +984,8 @@ async function sendChatMessage() {
     document.getElementById('chatStatus').className = 'chat-status';
   }
 }
+
+
 
 function sendSuggestion(btn) {
   document.getElementById('chatInput').value = btn.textContent.replace(/^[\p{Emoji}\s]+/u, '').trim();
