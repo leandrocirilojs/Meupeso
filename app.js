@@ -1093,9 +1093,9 @@ if(foodData && foodData.foods){
   } catch (err) {
     removeTyping();
     let errorMsg = '⚠️ Erro ao conectar com o Gemini.';
-    if (err.message.includes('API_KEY_INVALID') || err.message.includes('400')) {
-      errorMsg = '🔑 Chave de API inválida. Verifique e salve novamente.';
-      showApiKeyBanner();
+    if (err.message.includes('429')) {
+  errorMsg = '⏳ Muitas requisições. Aguarde alguns segundos.';
+
     } else if (err.message.includes('QUOTA_EXCEEDED') || err.message.includes('429')) {
       errorMsg = '⏳ Limite de requisições atingido. Aguarde um momento e tente novamente.';
     } else {
