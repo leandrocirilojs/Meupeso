@@ -1096,14 +1096,13 @@ if(foodData && foodData.foods){
   } catch (err) {
     removeTyping();
     let errorMsg = '⚠️ Erro ao conectar com o Gemini.';
-    if (err.message.includes('429')) {
-  errorMsg = '⏳ Muitas requisições. Aguarde alguns segundos.';
 
-    } else if (err.message.includes('QUOTA_EXCEEDED') || err.message.includes('429')) {
-      errorMsg = '⏳ Limite de requisições atingido. Aguarde um momento e tente novamente.';
-    } else {
-      errorMsg += ` ${err.message}`;
-    }
+if (err.message.includes('429') || err.message.includes('QUOTA_EXCEEDED')) {
+  errorMsg = '⏳ Muitas requisições. Aguarde alguns segundos e tente novamente.';
+} else {
+  errorMsg += ` ${err.message}`;
+}else if {
+    
     appendMessage('ai', errorMsg);
   } finally {
     chatIsTyping = false;
