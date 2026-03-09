@@ -1062,4 +1062,4 @@ function initChat() {
       if (msg.role === 'assistant') appendMessage('ai', msg.content);
     });
   }
-}
+       }
