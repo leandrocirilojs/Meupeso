@@ -20,7 +20,6 @@ const offCache = {};
 
 const TOTAL_STEPS = 3;
 const MEALS = ['Café da manhã','Almoço','Lanche','Jantar','Pré-treino','Pós-treino'];
-const BACKEND_URL = 'https://cuida-seven.vercel.app/api/chat';
 
 function todayKey(){ return new Date().toLocaleDateString('pt-BR'); }
 function getWater(){ return waterStore[todayKey()]||0; }
@@ -827,11 +826,28 @@ function showTab(t){
 }
 
 // =====================================================================
-// CHAT IA — via Backend Vercel (chave segura no servidor)
+// CHAT IA — GROQ (chave do usuário via banner)
 // =====================================================================
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
+
 let chatHistory = JSON.parse(localStorage.getItem('nt_chat') || '[]');
 let chatIsTyping = false;
 let chatInitialized = false;
+
+function getGroqKey() {
+  return localStorage.getItem('nt_groq_key') || '';
+}
+
+function saveGroqKey() {
+  const input = document.getElementById('apiKeyInput');
+  const key = input ? input.value.trim() : '';
+  if (!key) return;
+  localStorage.setItem('nt_groq_key', key);
+  const banner = document.getElementById('apiKeyBanner');
+  if (banner) banner.style.display = 'none';
+  appendMessage('ai', '✅ Chave Groq configurada! Agora pode me perguntar qualquer coisa sobre nutrição.');
+}
 
 function extractFoodJSON(text) {
   const match = text.match(/```json([\s\S]*?)```/);
@@ -900,6 +916,9 @@ async function sendChatMessage() {
   const text = input.value.trim();
   if (!text || chatIsTyping) return;
 
+  const apiKey = getGroqKey();
+  if (!apiKey) { showApiKeyBanner(); return; }
+
   input.value = '';
   input.style.height = 'auto';
 
@@ -921,15 +940,23 @@ async function sendChatMessage() {
       ...chatHistory.slice(-10)
     ];
 
-    const res = await fetch(BACKEND_URL, {
+    const res = await fetch(GROQ_API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages })
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        messages,
+        temperature: 0.7,
+        max_tokens: 1024
+      })
     });
 
     if (!res.ok) {
       const err = await res.json();
-      throw new Error(err?.error || `Erro HTTP ${res.status}`);
+      throw new Error(err?.error?.message || `Erro HTTP ${res.status}`);
     }
 
     const data = await res.json();
@@ -947,7 +974,16 @@ async function sendChatMessage() {
 
   } catch (err) {
     removeTyping();
-    appendMessage('ai', `⚠️ Erro ao conectar com o assistente. ${err.message}`);
+    let errorMsg = '⚠️ Erro ao conectar com o Groq.';
+    if (err.message.includes('401') || err.message.includes('invalid_api_key') || err.message.includes('Unauthorized')) {
+      errorMsg = '🔑 Chave inválida. Verifique sua chave em console.groq.com e salve novamente.';
+      showApiKeyBanner();
+    } else if (err.message.includes('429') || err.message.toLowerCase().includes('rate limit')) {
+      errorMsg = '⏳ Limite temporário atingido. Aguarde alguns segundos e tente novamente.';
+    } else {
+      errorMsg += ` ${err.message}`;
+    }
+    appendMessage('ai', errorMsg);
   } finally {
     chatIsTyping = false;
     document.getElementById('chatSendBtn').disabled = false;
@@ -1042,11 +1078,33 @@ function clearChat() {
   initChat();
 }
 
+function showApiKeyBanner() {
+  const existing = document.getElementById('apiKeyBanner');
+  if (existing) { existing.style.display = 'flex'; return; }
+  const container = document.getElementById('chatMessages');
+  const banner = document.createElement('div');
+  banner.id = 'apiKeyBanner';
+  banner.className = 'api-key-banner';
+  banner.innerHTML = `
+    <div class="api-key-banner-title">🔑 Configure sua chave Groq</div>
+    <div class="api-key-banner-sub">
+      Para usar o chat, você precisa de uma chave gratuita do Groq.<br>
+      1. Acesse <strong>console.groq.com</strong><br>
+      2. Vá em <strong>API Keys → Create API Key</strong><br>
+      3. Cole a chave abaixo e salve.
+    </div>
+    <div class="api-key-input-row">
+      <input type="password" id="apiKeyInput" placeholder="gsk_..." value="${getGroqKey()}"/>
+      <button class="api-key-save-btn" onclick="saveGroqKey()">Salvar</button>
+    </div>`;
+  container.appendChild(banner);
+  container.scrollTop = container.scrollHeight;
+}
+
 function initChat() {
   if (chatInitialized) return;
   chatInitialized = true;
 
-  // Limpa histórico antigo do Gemini se necessário
   if (chatHistory.length > 0 && chatHistory[0].parts) {
     chatHistory = [];
     localStorage.removeItem('nt_chat');
@@ -1062,4 +1120,8 @@ function initChat() {
       if (msg.role === 'assistant') appendMessage('ai', msg.content);
     });
   }
-}
+
+  if (!getGroqKey()) {
+    setTimeout(showApiKeyBanner, 300);
+  }
+  }
