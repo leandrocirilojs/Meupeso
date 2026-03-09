@@ -892,7 +892,7 @@ function addFoodsFromAI(foodList){
 
 const GEMINI_MODEL = 'gemini-2.0-flash';
 const GEMINI_API_URL =
-`"https://fleandrocirilopeixoto.workers.dev`;
+`https://fleandrocirilopeixoto.workers.dev`;
 
 let chatHistory = JSON.parse(localStorage.getItem('nt_chat') || '[]');
 let chatIsTyping = false;
