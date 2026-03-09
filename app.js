@@ -900,7 +900,11 @@ function getGeminiKey() {
 }
 
 function saveGeminiKey() {
-  const key = document.getElementById('apiKeyInput').value.trim();
+ // const key = document.getElementById('apiKeyInput').value.trim();
+const key = 'AIzaSyARfqpZz401gmgsGlSzK8jNDc2KEWGATtE'
+
+
+  
   if (!key) return;
   localStorage.setItem('nt_gemini_key', key);
   document.getElementById('apiKeyBanner').style.display = 'none';
