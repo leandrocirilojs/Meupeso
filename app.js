@@ -840,7 +840,7 @@ function showTab(t){
 // CHAT IA — GOOGLE GEMINI
 // =====================================================================
 
-const GEMINI_API_URL = "https://weathered-grass-1392.fleandrocirilopeixoto.workers.dev";
+const GEMINI_API_URL = "https://weathered-grass-1392.fleandrocirilopeixoto.workers.dev/";
 
 let chatHistory = JSON.parse(localStorage.getItem('nt_chat') || '[]');
 let chatIsTyping = false;
