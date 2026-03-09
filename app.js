@@ -887,7 +887,7 @@ function addFoodsFromAI(foodList){
 
 
 
-const GEMINI_MODEL = 'const GEMINI_MODEL = 'gemini-1.5-flash';
+const GEMINI_MODEL = 'gemini-1.5-flash';
 const GEMINI_API_URL =
 `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
