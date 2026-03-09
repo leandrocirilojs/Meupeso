@@ -1,4 +1,5 @@
-// ======================================================================
+Correto com ia
+// =====================================================================
 // STATE
 // =====================================================================
 let profile = JSON.parse(localStorage.getItem('nt_profile')||'null');
@@ -821,398 +822,279 @@ function showTab(t){
   if(t==='chat') initChat();
 }
 
-
-
-
-
-
-
 // =====================================================================
 // CHAT IA — GOOGLE GEMINI
 // =====================================================================
-
-
-
-
-
-
-// =====================================================================
-// CHAT IA — GOOGLE GEMINI
-// =====================================================================
-
-const GEMINI_API_URL = "https://weathered-grass-1392.fleandrocirilopeixoto.workers.dev/";
+const GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 let chatHistory = JSON.parse(localStorage.getItem('nt_chat') || '[]');
 let chatIsTyping = false;
 let chatInitialized = false;
 
-
-// =========================
-// EXTRAIR JSON DA RESPOSTA
-// =========================
-
-function extractFoodJSON(text){
-
-  const match = text.match(/```json\s*([\s\S]*?)```/);
-
-  if(!match) return null;
-
-  try{
-    return JSON.parse(match[1]);
-  }catch(e){
-    return null;
-  }
-
+function getGeminiKey() {
+  return localStorage.getItem('nt_gemini_key') || '';
 }
 
-
-// =========================
-// ADICIONAR ALIMENTOS DA IA
-// =========================
-
-function addFoodsFromAI(foodList){
-
-  if(!foodList || !foodList.length) return;
-
-  foodList.forEach(item=>{
-
-    const food = FOODS.find(f =>
-      item.name.toLowerCase().includes(f.n.toLowerCase())
-    );
-
-    if(!food) return;
-
-    const grams = item.grams || 100;
-    const factor = grams / 100;
-
-    logs.push({
-      id: Date.now() + Math.random(),
-      date: todayKey(),
-      time: new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
-      meal: selectedMeal,
-      food: food.n,
-      grams: grams,
-      cal: Math.round(food.c * factor),
-      prot: Math.round(food.p * factor * 10) / 10,
-      carb: Math.round(food.ch * factor * 10) / 10,
-      fat: Math.round(food.g * factor * 10) / 10,
-      source: 'ai'
-    });
-
-  });
-
-  save('nt_logs', logs);
-  updateUI();
-
+function saveGeminiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key) return;
+  localStorage.setItem('nt_gemini_key', key);
+  document.getElementById('apiKeyBanner').style.display = 'none';
+  appendMessage('ai', '✅ Chave configurada com sucesso! Agora pode me perguntar qualquer coisa sobre nutrição. 🥗');
 }
 
-
-// =========================
-// CONTEXTO DO USUÁRIO
-// =========================
-
-function buildUserContext(){
-
-  if(!profile) return '';
-
+function buildUserContext() {
+  if (!profile) return '';
   const goals = calcGoals(profile);
-
   const today = logs.filter(l => l.date === todayKey());
-
-  const tot = today.reduce((a,l)=>({
-    cal:a.cal+l.cal,
-    prot:a.prot+l.prot,
-    carb:a.carb+l.carb,
-    fat:a.fat+l.fat
-  }),{cal:0,prot:0,carb:0,fat:0});
-
+  const tot = today.reduce((a, l) => ({
+    cal: a.cal + l.cal, prot: a.prot + l.prot,
+    carb: a.carb + l.carb, fat: a.fat + l.fat
+  }), { cal: 0, prot: 0, carb: 0, fat: 0 });
+  const goalLabels = { emagrecer: 'Emagrecimento', massa: 'Ganho de Massa', manter: 'Manutenção' };
+  const water = getWater();
+  const waterGoal = Math.round(profile.weight * 35);
   const todayFoods = today.length
-    ? today.map(l => `${l.food} (${l.grams}g)`).join(', ')
-    : 'Nenhum alimento registrado hoje';
-
+    ? today.map(l => `${l.food} (${l.grams}g, ${l.cal}kcal) — ${l.meal}`).join('\n    ')
+    : 'Nenhum alimento registrado ainda hoje.';
+  const lastWeight = weights.length ? weights[weights.length - 1].val + ' kg' : 'Não informado';
   return `
-Usuário: ${profile.name}
+=== DADOS DO USUÁRIO (Cuida App) ===
+Nome: ${profile.name}
+Peso atual: ${lastWeight}
+Altura: ${profile.height} cm
+Idade: ${profile.age} anos
+Sexo: ${profile.gender === 'M' ? 'Masculino' : 'Feminino'}
+Objetivo: ${goalLabels[profile.goal]}
 
-Objetivo: ${profile.goal}
-
-Metas diárias:
-Calorias: ${goals.cal}
+=== METAS DIÁRIAS ===
+Calorias: ${goals.cal} kcal
 Proteína: ${goals.prot}g
 Carboidrato: ${goals.carb}g
 Gordura: ${goals.fat}g
 
-Consumo hoje:
-Calorias: ${Math.round(tot.cal)}
-Proteína: ${Math.round(tot.prot)}g
-Carboidrato: ${Math.round(tot.carb)}g
-Gordura: ${Math.round(tot.fat)}g
+=== CONSUMO DE HOJE ===
+Calorias: ${Math.round(tot.cal)} / ${goals.cal} kcal (${Math.round((tot.cal / goals.cal) * 100)}%)
+Proteína: ${Math.round(tot.prot)}g / ${goals.prot}g
+Carboidrato: ${Math.round(tot.carb)}g / ${goals.carb}g
+Gordura: ${Math.round(tot.fat)}g / ${goals.fat}g
+Água: ${water}ml / ${waterGoal}ml
 
-Alimentos hoje:
-${todayFoods}
-`;
-
+=== ALIMENTOS CONSUMIDOS HOJE ===
+    ${todayFoods}
+===================================`;
 }
 
+function buildSystemPrompt() {
+  return `Você é o "Nutri IA", assistente nutricional do app Cuida.
+Você é especialista em nutrição, dietas e fitness.
+Responda sempre em português brasileiro, de forma amigável, clara e motivadora.
+Use emojis com moderação para tornar a conversa mais dinâmica.
+Seja direto e prático nas respostas.
+Quando relevante, use os dados do perfil do usuário para personalizar suas respostas.
+Formate listas com • e destaque valores importantes em **negrito**.
+Não invente informações médicas — quando necessário, recomende consultar um nutricionista.
 
-// =========================
-// PROMPT DO SISTEMA
-// =========================
-
-function buildSystemPrompt(){
-
-return `
-Você é o Nutri IA, assistente nutricional do aplicativo Cuida.
-
-Responda sempre em português do Brasil.
-
-Ajude o usuário com:
-
-• nutrição
-• dieta
-• calorias
-• proteínas
-• sugestões de refeições
-• análise alimentar
-
-Use linguagem simples e amigável.
-
-${buildUserContext()}
-
-IMPORTANTE:
-
-Se o usuário disser que comeu algum alimento,
-extraia os alimentos mencionados e gere um JSON no final da resposta.
-
-Formato obrigatório:
-
-\`\`\`json
-{
- "foods":[
-   {"name":"ovo","grams":100},
-   {"name":"banana","grams":120}
- ]
-}
-\`\`\`
-
-Regras:
-
-• O JSON deve ficar no FINAL da resposta  
-• Apenas alimentos realmente citados  
-• Sempre usar gramas aproximadas
-`;
+${buildUserContext()}`;
 }
 
-
-// =========================
-// ENVIAR MENSAGEM
-// =========================
-
-async function sendChatMessage(){
-
+async function sendChatMessage() {
   const input = document.getElementById('chatInput');
   const text = input.value.trim();
+  if (!text || chatIsTyping) return;
 
-  if(!text || chatIsTyping) return;
+  const apiKey = getGeminiKey();
+  if (!apiKey) { showApiKeyBanner(); return; }
 
   input.value = '';
   input.style.height = 'auto';
 
   const welcome = document.querySelector('.chat-welcome');
-  if(welcome) welcome.remove();
+  if (welcome) welcome.remove();
 
   appendMessage('user', text);
-
-  chatHistory.push({ role:'user', parts:[{ text }] });
+  chatHistory.push({ role: 'user', parts: [{ text }] });
 
   showTyping();
-
   chatIsTyping = true;
-
   document.getElementById('chatSendBtn').disabled = true;
   document.getElementById('chatStatus').textContent = '● Digitando...';
   document.getElementById('chatStatus').className = 'chat-status typing';
 
-  try{
-
+  try {
     const recentHistory = chatHistory.slice(-10);
-
     const body = {
-      system_instruction:{ parts:[{ text: buildSystemPrompt() }] },
+      system_instruction: { parts: [{ text: buildSystemPrompt() }] },
       contents: recentHistory,
-      generationConfig:{ temperature:0.7, maxOutputTokens:1024 }
+      generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
     };
 
-    const res = await fetch(GEMINI_API_URL,{
-      method:'POST',
-      headers:{ 'Content-Type':'application/json' },
+    const res = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     });
 
-    if(!res.ok){
+    if (!res.ok) {
       const err = await res.json();
       throw new Error(err?.error?.message || `Erro HTTP ${res.status}`);
     }
 
     const data = await res.json();
-
     const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!reply) throw new Error('Resposta vazia do Gemini.');
 
-    if(!reply) throw new Error('Resposta vazia do Gemini.');
-
-    chatHistory.push({ role:'model', parts:[{ text: reply }] });
-
+    chatHistory.push({ role: 'model', parts: [{ text: reply }] });
     localStorage.setItem('nt_chat', JSON.stringify(chatHistory.slice(-20)));
 
     removeTyping();
+    appendMessage('ai', reply);
 
-    const visibleReply = reply.replace(/```json[\s\S]*?```/, '').trim();
-
-    appendMessage('ai', visibleReply);
-
-    const foodData = extractFoodJSON(reply);
-
-    if(foodData && foodData.foods){
-      addFoodsFromAI(foodData.foods);
-    }
-
-  }catch(err){
-
+  } catch (err) {
     removeTyping();
-
     let errorMsg = '⚠️ Erro ao conectar com o Gemini.';
-
-    if(err.message.includes('429') || err.message.includes('QUOTA_EXCEEDED')){
-      errorMsg = '⏳ Muitas requisições. Aguarde alguns segundos e tente novamente.';
-    }else{
+    if (err.message.includes('API_KEY_INVALID') || err.message.includes('400')) {
+      errorMsg = '🔑 Chave de API inválida. Verifique e salve novamente.';
+      showApiKeyBanner();
+    } else if (err.message.includes('QUOTA_EXCEEDED') || err.message.includes('429')) {
+      errorMsg = '⏳ Limite de requisições atingido. Aguarde um momento e tente novamente.';
+    } else {
       errorMsg += ` ${err.message}`;
     }
-
     appendMessage('ai', errorMsg);
-
-  }finally{
-
+  } finally {
     chatIsTyping = false;
-
     document.getElementById('chatSendBtn').disabled = false;
-
     document.getElementById('chatStatus').textContent = '● Online';
     document.getElementById('chatStatus').className = 'chat-status';
-
   }
-
 }
 
+function sendSuggestion(btn) {
+  document.getElementById('chatInput').value = btn.textContent.replace(/^[\p{Emoji}\s]+/u, '').trim();
+  sendChatMessage();
+}
 
-// =========================
-// UI DO CHAT
-// =========================
+function handleChatKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendChatMessage();
+  }
+}
 
-function appendMessage(role,text){
+function autoResizeTextarea(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
 
+function appendMessage(role, text) {
   const container = document.getElementById('chatMessages');
-
-  const time = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-
+  const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   const div = document.createElement('div');
-
   div.className = `chat-msg ${role}`;
-
   div.innerHTML = `
-    <div class="chat-msg-avatar">${role==='ai'?'🥗':'👤'}</div>
+    <div class="chat-msg-avatar">${role === 'ai' ? '🥗' : '👤'}</div>
     <div>
       <div class="chat-msg-bubble">${formatAIText(text)}</div>
       <div class="chat-msg-time">${time}</div>
     </div>`;
-
   container.appendChild(div);
-
   container.scrollTop = container.scrollHeight;
-
 }
 
-
-function formatAIText(text){
-
+function formatAIText(text) {
   return text
-  .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
-  .replace(/\*(.*?)\*/g,'<em>$1</em>')
-  .replace(/\n/g,'<br>');
-
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`(.*?)`/g, '<span class="highlight">$1</span>')
+    .replace(/^• (.+)$/gm, '<li>$1</li>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
+    .replace(/\n{2,}/g, '<br><br>')
+    .replace(/\n/g, '<br>');
 }
 
-
-// =========================
-// TYPING
-// =========================
-
-function showTyping(){
-
+function showTyping() {
   const container = document.getElementById('chatMessages');
-
   const div = document.createElement('div');
-
-  div.className='chat-msg ai';
-
-  div.id='typingIndicator';
-
-  div.innerHTML=`
+  div.className = 'chat-msg ai';
+  div.id = 'typingIndicator';
+  div.innerHTML = `
     <div class="chat-msg-avatar">🥗</div>
-    <div class="chat-msg-bubble">Digitando...</div>`;
-
+    <div class="chat-msg-bubble" style="padding:14px 16px">
+      <div class="typing-indicator">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>
+    </div>`;
   container.appendChild(div);
-
+  container.scrollTop = container.scrollHeight;
 }
 
-
-function removeTyping(){
-
+function removeTyping() {
   document.getElementById('typingIndicator')?.remove();
-
 }
 
+function clearChat() {
+  if (!confirm('Limpar toda a conversa?')) return;
+  chatHistory = [];
+  localStorage.removeItem('nt_chat');
+  chatInitialized = false;
+  document.getElementById('chatMessages').innerHTML = `
+    <div class="chat-welcome">
+      <div class="chat-welcome-icon">🥗</div>
+      <div class="chat-welcome-title">Olá! Sou o Nutri IA</div>
+      <div class="chat-welcome-sub">Seu assistente nutricional inteligente. Posso analisar sua dieta, sugerir refeições e responder dúvidas sobre nutrição!</div>
+      <div class="chat-suggestions">
+        <button class="suggestion-btn" onclick="sendSuggestion(this)">📊 Como está minha dieta hoje?</button>
+        <button class="suggestion-btn" onclick="sendSuggestion(this)">🍽️ Sugestão de refeição para bater minha meta</button>
+        <button class="suggestion-btn" onclick="sendSuggestion(this)">💪 Quanto de proteína devo consumir?</button>
+        <button class="suggestion-btn" onclick="sendSuggestion(this)">🥦 Alimentos ricos em proteína e baixo em calorias</button>
+      </div>
+    </div>`;
+}
 
-// =========================
-// INIT CHAT
-// =========================
+function showApiKeyBanner() {
+  const existing = document.getElementById('apiKeyBanner');
+  if (existing) { existing.style.display = 'flex'; return; }
+  const container = document.getElementById('chatMessages');
+  const banner = document.createElement('div');
+  banner.id = 'apiKeyBanner';
+  banner.className = 'api-key-banner';
+  banner.innerHTML = `
+    <div class="api-key-banner-title">🔑 Configure sua chave Gemini</div>
+    <div class="api-key-banner-sub">
+      Para usar o chat, você precisa de uma chave gratuita do Google Gemini.<br>
+      1. Acesse <strong>aistudio.google.com</strong><br>
+      2. Clique em <strong>"Get API Key"</strong><br>
+      3. Cole a chave abaixo e salve.
+    </div>
+    <div class="api-key-input-row">
+      <input type="password" id="apiKeyInput" placeholder="AIza..." value="${getGeminiKey()}"/>
+      <button class="api-key-save-btn" onclick="saveGeminiKey()">Salvar</button>
+    </div>`;
+  container.appendChild(banner);
+  container.scrollTop = container.scrollHeight;
+}
 
-function initChat(){
-
-  if(chatInitialized) return;
-
+function initChat() {
+  if (chatInitialized) return;
   chatInitialized = true;
 
-  if(chatHistory.length>0){
-
-    const welcome=document.querySelector('.chat-welcome');
-
-    if(welcome) welcome.remove();
-
-    const container=document.getElementById('chatMessages');
-
-    container.innerHTML='';
-
-    chatHistory.forEach(msg=>{
-
-      if(msg.role==='user') appendMessage('user', msg.parts[0].text);
-
-      if(msg.role==='model') appendMessage('ai', msg.parts[0].text);
-
+  if (chatHistory.length > 0) {
+    const welcome = document.querySelector('.chat-welcome');
+    if (welcome) welcome.remove();
+    const container = document.getElementById('chatMessages');
+    container.innerHTML = '';
+    chatHistory.forEach(msg => {
+      if (msg.role === 'user') appendMessage('user', msg.parts[0].text);
+      if (msg.role === 'model') appendMessage('ai', msg.parts[0].text);
     });
-
   }
 
-}
-
-
-
-
-
-
-
-
-
-
-
-
- 
-  
+  if (!getGeminiKey()) {
+    setTimeout(showApiKeyBanner, 300);
+  }
+    }
