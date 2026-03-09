@@ -1085,32 +1085,29 @@ const foodData = extractFoodJSON(reply);
 
 if(foodData && foodData.foods){
   addFoodsFromAI(foodData.foods);
-}
+}  catch (err) {
 
+  removeTyping();
 
+  let errorMsg = '⚠️ Erro ao conectar com o Gemini.';
 
-
-
-    
-
-  } catch (err) {
-    removeTyping();
-    let errorMsg = '⚠️ Erro ao conectar com o Gemini.';
-
-if (err.message.includes('429') || err.message.includes('QUOTA_EXCEEDED')) {
-  errorMsg = '⏳ Muitas requisições. Aguarde alguns segundos e tente novamente.';
-} else {
-  errorMsg += ` ${err.message}`;
-}else if {
-    
-    appendMessage('ai', errorMsg);
-  } finally {
-    chatIsTyping = false;
-    document.getElementById('chatSendBtn').disabled = false;
-    document.getElementById('chatStatus').textContent = '● Online';
-    document.getElementById('chatStatus').className = 'chat-status';
+  if (err.message.includes('429') || err.message.includes('QUOTA_EXCEEDED')) {
+    errorMsg = '⏳ Muitas requisições. Aguarde alguns segundos e tente novamente.';
+  } else {
+    errorMsg += ` ${err.message}`;
   }
+
+  appendMessage('ai', errorMsg);
+
+} finally {
+
+  chatIsTyping = false;
+  document.getElementById('chatSendBtn').disabled = false;
+  document.getElementById('chatStatus').textContent = '● Online';
+  document.getElementById('chatStatus').className = 'chat-status';
+
 }
+
 
 function sendSuggestion(btn) {
   document.getElementById('chatInput').value = btn.textContent.replace(/^[\p{Emoji}\s]+/u, '').trim();
