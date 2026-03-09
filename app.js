@@ -1083,9 +1083,11 @@ appendMessage('ai', visibleReply);
 
 const foodData = extractFoodJSON(reply);
 
-if(foodData && foodData.foods){
+if (foodData && foodData.foods) {
   addFoodsFromAI(foodData.foods);
-}  catch (err) {
+}
+
+} catch (err) {
 
   removeTyping();
 
