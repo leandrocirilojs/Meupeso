@@ -903,10 +903,6 @@ let chatInitialized = false;
 
 
   
-  if (!key) return;
-  localStorage.setItem('nt_gemini_key', key);
-  document.getElementById('apiKeyBanner').style.display = 'none';
-  appendMessage('ai', '✅ Chave configurada com sucesso! Agora pode me perguntar qualquer coisa sobre nutrição.');
 }
 
 function buildUserContext() {
