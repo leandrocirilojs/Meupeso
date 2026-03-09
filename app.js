@@ -1076,7 +1076,10 @@ async function sendChatMessage() {
     //troquei 
     //appendMessage('ai', reply);
     //por
-    appendMessage('ai', reply);
+    const visibleReply = reply.replace(/```json[\s\S]*?```/, '').trim();
+appendMessage('ai', visibleReply);
+
+    
 
 const foodData = extractFoodJSON(reply);
 
