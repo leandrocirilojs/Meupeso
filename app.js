@@ -841,12 +841,12 @@ function showTab(t){
 
 function extractFoodJSON(text){
 
-  const match = text.match(/\{[\s\S]*"foods"[\s\S]*\}/);
+  const match = text.match(/```json\s*([\s\S]*?)```/);
 
   if(!match) return null;
 
   try{
-    return JSON.parse(match[0]);
+    return JSON.parse(match[1]);
   }catch(e){
     return null;
   }
