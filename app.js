@@ -1,4 +1,3 @@
-
 // =====================================================================
 // STATE
 // =====================================================================
@@ -822,11 +821,75 @@ function showTab(t){
   if(t==='chat') initChat();
 }
 
+
+
+
+
+
+
 // =====================================================================
 // CHAT IA — GOOGLE GEMINI
 // =====================================================================
-const GEMINI_MODEL = 'gemini-2.5-flash';
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+
+
+
+
+
+// =====================================================================
+// CHAT IA — GOOGLE GEMINI
+// =====================================================================
+
+function extractFoodJSON(text){
+  const match = text.match(/```json([\s\S]*?)```/);
+  if(!match) return null;
+
+  try{
+    return JSON.parse(match[1]);
+  }catch(e){
+    return null;
+  }
+}
+
+function addFoodsFromAI(foodList){
+
+  if(!foodList || !foodList.length) return;
+
+  foodList.forEach(item=>{
+
+    const food = FOODS.find(f =>
+      f.n.toLowerCase().includes(item.name.toLowerCase())
+    );
+
+    if(!food) return;
+
+    const grams = item.grams || 100;
+    const factor = grams / 100;
+
+    logs.push({
+      id: Date.now() + Math.random(),
+      date: todayKey(),
+      time: new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+      meal: selectedMeal,
+      food: food.n,
+      grams: grams,
+      cal: Math.round(food.c * factor),
+      prot: Math.round(food.p * factor * 10) / 10,
+      carb: Math.round(food.ch * factor * 10) / 10,
+      fat: Math.round(food.g * factor * 10) / 10,
+      source: 'ai'
+    });
+
+  });
+
+  save('nt_logs', logs);
+  updateUI();
+}
+
+
+
+const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_API_URL =
+`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 let chatHistory = JSON.parse(localStorage.getItem('nt_chat') || '[]');
 let chatIsTyping = false;
@@ -841,63 +904,125 @@ function saveGeminiKey() {
   if (!key) return;
   localStorage.setItem('nt_gemini_key', key);
   document.getElementById('apiKeyBanner').style.display = 'none';
-  appendMessage('ai', '✅ Chave configurada com sucesso! Agora pode me perguntar qualquer coisa sobre nutrição. 🥗');
+  appendMessage('ai', '✅ Chave configurada com sucesso! Agora pode me perguntar qualquer coisa sobre nutrição.');
 }
 
 function buildUserContext() {
-  if (!profile) return '';
-  const goals = calcGoals(profile);
-  const today = logs.filter(l => l.date === todayKey());
-  const tot = today.reduce((a, l) => ({
-    cal: a.cal + l.cal, prot: a.prot + l.prot,
-    carb: a.carb + l.carb, fat: a.fat + l.fat
-  }), { cal: 0, prot: 0, carb: 0, fat: 0 });
-  const goalLabels = { emagrecer: 'Emagrecimento', massa: 'Ganho de Massa', manter: 'Manutenção' };
-  const water = getWater();
-  const waterGoal = Math.round(profile.weight * 35);
-  const todayFoods = today.length
-    ? today.map(l => `${l.food} (${l.grams}g, ${l.cal}kcal) — ${l.meal}`).join('\n    ')
-    : 'Nenhum alimento registrado ainda hoje.';
-  const lastWeight = weights.length ? weights[weights.length - 1].val + ' kg' : 'Não informado';
-  return `
-=== DADOS DO USUÁRIO (Cuida App) ===
-Nome: ${profile.name}
-Peso atual: ${lastWeight}
-Altura: ${profile.height} cm
-Idade: ${profile.age} anos
-Sexo: ${profile.gender === 'M' ? 'Masculino' : 'Feminino'}
-Objetivo: ${goalLabels[profile.goal]}
 
-=== METAS DIÁRIAS ===
-Calorias: ${goals.cal} kcal
+  if (!profile) return '';
+
+  const goals = calcGoals(profile);
+
+  const today = logs.filter(l => l.date === todayKey());
+
+  const tot = today.reduce((a,l)=>({
+    cal:a.cal+l.cal,
+    prot:a.prot+l.prot,
+    carb:a.carb+l.carb,
+    fat:a.fat+l.fat
+  }),{cal:0,prot:0,carb:0,fat:0});
+
+  const todayFoods = today.length
+    ? today.map(l => `${l.food} (${l.grams}g)`).join(', ')
+    : 'Nenhum alimento registrado hoje';
+
+  return `
+Usuário: ${profile.name}
+
+Objetivo: ${profile.goal}
+
+Metas diárias:
+Calorias: ${goals.cal}
 Proteína: ${goals.prot}g
 Carboidrato: ${goals.carb}g
 Gordura: ${goals.fat}g
 
-=== CONSUMO DE HOJE ===
-Calorias: ${Math.round(tot.cal)} / ${goals.cal} kcal (${Math.round((tot.cal / goals.cal) * 100)}%)
-Proteína: ${Math.round(tot.prot)}g / ${goals.prot}g
-Carboidrato: ${Math.round(tot.carb)}g / ${goals.carb}g
-Gordura: ${Math.round(tot.fat)}g / ${goals.fat}g
-Água: ${water}ml / ${waterGoal}ml
+Consumo hoje:
+Calorias: ${Math.round(tot.cal)}
+Proteína: ${Math.round(tot.prot)}g
+Carboidrato: ${Math.round(tot.carb)}g
+Gordura: ${Math.round(tot.fat)}g
 
-=== ALIMENTOS CONSUMIDOS HOJE ===
-    ${todayFoods}
-===================================`;
+Alimentos hoje:
+${todayFoods}
+`;
 }
 
-function buildSystemPrompt() {
-  return `Você é o "Nutri IA", assistente nutricional do app Cuida.
-Você é especialista em nutrição, dietas e fitness.
-Responda sempre em português brasileiro, de forma amigável, clara e motivadora.
-Use emojis com moderação para tornar a conversa mais dinâmica.
-Seja direto e prático nas respostas.
-Quando relevante, use os dados do perfil do usuário para personalizar suas respostas.
-Formate listas com • e destaque valores importantes em **negrito**.
-Não invente informações médicas — quando necessário, recomende consultar um nutricionista.
+function buildSystemPrompt(){
 
-${buildUserContext()}`;
+return `
+Você é o Nutri IA, assistente nutricional do aplicativo Cuida.
+
+Responda sempre em português do Brasil.
+
+Ajude o usuário com:
+
+• nutrição
+• dieta
+• calorias
+• proteínas
+• sugestões de refeições
+• análise alimentar
+
+Use linguagem simples e amigável.
+
+Use os dados do usuário quando necessário.
+
+${buildUserContext()}
+
+IMPORTANTE:
+
+Se o usuário disser que comeu algum alimento,
+extraia os alimentos mencionados e gere um JSON no final da resposta.
+
+Formato obrigatório:
+
+\`\`\`json
+{
+ "foods":[
+   {"name":"ovo","grams":100},
+   {"name":"banana","grams":120}
+ ]
 }
+\`\`\`
+
+Regras:
+
+• O JSON deve ficar no FINAL da resposta
+• Apenas alimentos realmente citados
+• Sempre usar gramas aproximadas
+`;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 async function sendChatMessage() {
   const input = document.getElementById('chatInput');
@@ -949,7 +1074,25 @@ async function sendChatMessage() {
     localStorage.setItem('nt_chat', JSON.stringify(chatHistory.slice(-20)));
 
     removeTyping();
+
+
+    
+    //troquei 
+    //appendMessage('ai', reply);
+    //por
     appendMessage('ai', reply);
+
+const foodData = extractFoodJSON(reply);
+
+if(foodData && foodData.foods){
+  addFoodsFromAI(foodData.foods);
+}
+
+
+
+
+
+    
 
   } catch (err) {
     removeTyping();
@@ -1097,4 +1240,4 @@ function initChat() {
   if (!getGeminiKey()) {
     setTimeout(showApiKeyBanner, 300);
   }
-    }
+}
