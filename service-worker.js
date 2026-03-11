@@ -1,132 +1,89 @@
-// =====================================================================
-// CUIDA — Service Worker
-// Versão do cache: atualize este número sempre que mudar arquivos
-// =====================================================================
 const CACHE_NAME = 'cuida-v1';
-
-// Arquivos essenciais para funcionar offline
-const ASSETS = [
-  '/Meupeso/',
-  '/Meupeso/index.html',
-  '/Meupeso/style.css',
-  '/Meupeso/app.js',
-  '/Meupeso/manifest.json',
-  '/Meupeso/icons/icon-192.png',
-  '/Meupeso/icons/icon-512.png',
-  'https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800;900&display=swap'
+const STATIC_ASSETS = [
+  '/manifest.json',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
 ];
 
-// ─── INSTALL: salva arquivos no cache ───────────────────────────────
+// Install: cache apenas assets estáticos
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      console.log('[Cuida SW] Cache criado:', CACHE_NAME);
-      return cache.addAll(ASSETS);
-    })
+    caches.open(CACHE_NAME).then(cache =>
+      cache.addAll(STATIC_ASSETS.map(url => new Request(url, { mode: 'no-cors' })))
+    ).catch(() => {})
   );
   self.skipWaiting();
 });
 
-// ─── ACTIVATE: limpa caches antigos ─────────────────────────────────
+// Activate: apaga caches antigos
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(
-        keys
-          .filter(key => key !== CACHE_NAME)
-          .map(key => {
-            console.log('[Cuida SW] Removendo cache antigo:', key);
-            return caches.delete(key);
-          })
-      )
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
     )
   );
   self.clients.claim();
 });
 
-// ─── FETCH: estratégia Cache First + Network Fallback ───────────────
+// Mensagem para forçar atualização (skipWaiting)
+self.addEventListener('message', event => {
+  if (event.data && event.data.action === 'skipWaiting') {
+    self.skipWaiting();
+  }
+});
+
+// Fetch strategy
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // Requisições ao Open Food Facts: sempre busca na rede (sem cache)
-  if (url.hostname.includes('openfoodfacts.org')) {
-    event.respondWith(
-      fetch(event.request).catch(() =>
-        new Response(
-          JSON.stringify({ products: [], error: 'offline' }),
-          { headers: { 'Content-Type': 'application/json' } }
-        )
-      )
+  // Sempre rede para APIs externas
+  if (
+    url.hostname.includes('googleapis.com') ||
+    url.hostname.includes('generativelanguage') ||
+    url.hostname.includes('openfoodfacts.org') ||
+    url.hostname.includes('openai.com') ||
+    url.hostname.includes('mistral.ai')
+  ) {
+    return event.respondWith(
+      fetch(event.request).catch(() => new Response('', { status: 503 }))
     );
-    return;
   }
 
-  // Fontes do Google: cache primeiro
-  if (url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com')) {
-    event.respondWith(
-      caches.open(CACHE_NAME).then(cache =>
-        cache.match(event.request).then(cached =>
-          cached || fetch(event.request).then(response => {
-            cache.put(event.request, response.clone());
-            return response;
-          })
-        )
-      )
+  // Sempre rede para index.html — garante atualizações imediatas
+  if (url.pathname === '/' || url.pathname.endsWith('index.html')) {
+    return event.respondWith(
+      fetch(event.request).then(response => {
+        const toCache = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, toCache));
+        return response;
+      }).catch(() => caches.match('/index.html'))
     );
-    return;
   }
 
-  // Demais recursos: cache primeiro, rede como fallback
+  // Network first para JS e CSS (app.js, foods.js, style.css) — pega atualizações
+  if (
+    url.pathname.endsWith('.js') ||
+    url.pathname.endsWith('.css')
+  ) {
+    return event.respondWith(
+      fetch(event.request).then(response => {
+        const toCache = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, toCache));
+        return response;
+      }).catch(() => caches.match(event.request))
+    );
+  }
+
+  // Cache first para ícones, fontes e outros assets estáticos
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
-
-      return fetch(event.request)
-        .then(response => {
-          // Só cacheia respostas válidas e do mesmo origem
-          if (
-            !response ||
-            response.status !== 200 ||
-            response.type === 'opaque'
-          ) return response;
-
-          const toCache = response.clone();
-          caches.open(CACHE_NAME).then(cache =>
-            cache.put(event.request, toCache)
-          );
-
-          return response;
-        })
-        .catch(() => {
-          // Fallback offline para navegação
-          if (event.request.destination === 'document') {
-            return caches.match('/Meupeso/index.html');
-          }
-        });
+      return fetch(event.request).then(response => {
+        if (!response || response.status !== 200) return response;
+        const toCache = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, toCache));
+        return response;
+      }).catch(() => new Response('', { status: 503 }));
     })
-  );
-});
-
-// ─── PUSH NOTIFICATIONS (preparado para uso futuro) ─────────────────
-self.addEventListener('push', event => {
-  const data = event.data?.json() || {
-    title: 'Cuida',
-    body: 'Não esqueça de registrar sua refeição! 🥗'
-  };
-  event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: '/icons/icon-192.png',
-      badge: '/icons/icon-96.png',
-      vibrate: [100, 50, 100],
-      data: { url: data.url || '/' }
-    })
-  );
-});
-
-self.addEventListener('notificationclick', event => {
-  event.notification.close();
-  event.waitUntil(
-    clients.openWindow(event.notification.data?.url || '/')
   );
 });
